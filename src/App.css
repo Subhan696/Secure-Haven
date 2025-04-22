@@ -1,0 +1,80 @@
+/* Make the entire app take full height */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+/* Flex layout on main App */
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Push footer to bottom when content is short */
+main {
+  flex: 1;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+}
+
+main {
+  padding: 20px;
+}
+
+/* Hero Section */
+.hero {
+  background-color: #61dafb;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.hero h2 {
+  margin: 0;
+  font-size: 2.5rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  margin: 20px 0;
+}
+
+.hero button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  background: #20232a;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+/* About, Features, Contact */
+.about, .features, .contact {
+  padding: 40px 20px;
+  background: white;
+  margin: 20px 0;
+}
+
+.features ul {
+  list-style-type: square;
+  padding-left: 20px;
+}
+
+a {
+  color: #007acc;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .hero h2 {
+    font-size: 2rem;
+  }
+}

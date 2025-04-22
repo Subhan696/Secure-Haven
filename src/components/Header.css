@@ -1,0 +1,51 @@
+.header {
+  background-color: #20232a;
+  padding: 20px 40px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+/* Nav container */
+nav {
+  flex-grow: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nav-list {
+  display: flex;
+  list-style: none !important; /* Forcefully remove bullets */
+  margin: 0;
+  list-style-type: none;
+  padding: 0;
+  gap: 25px;
+}
+
+.nav-list li {
+  list-style: none; /* Double-check on each li */
+  margin: 0;
+}
+
+.nav-list a {
+  text-decoration: none;
+  color: white;
+  font-weight: 500;
+  padding: 8px 12px;
+  transition: background 0.3s, color 0.3s;
+}
+
+.nav-list a:hover,
+.nav-list .active-link {
+  background-color: white;
+  color: #20232a;
+  border-radius: 4px;
+  text-decoration: none; /* Ensure underline stays off */
+}
+
