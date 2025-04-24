@@ -1,0 +1,45 @@
+.hero {
+    background: linear-gradient(135deg, #61dafb, #4b79a1);
+    padding: 60px 20px;
+    text-align: center;
+    color: #fff;
+  }
+  
+  .hero h2 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+  }
+  
+  .hero p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+  }
+  
+  .hero-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #fff;
+    transition: background 0.3s ease;
+  }
+  
+  .login-btn {
+    background-color: #1f4068;
+  }
+  
+  .signup-btn {
+    background-color: #28a745;
+  }
+  
+  .btn:hover {
+    opacity: 0.9;
+  }
+  

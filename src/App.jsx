@@ -10,10 +10,12 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Features from './pages/Features';
 import Contact from './pages/Contact';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import './App.css';
 
 const Layout = () => (
-  <div className='App'>
+  <div className="App">
     <Header />
     <main>
       <Outlet />
@@ -31,6 +33,8 @@ const router = createBrowserRouter([
       { path: '/about', element: <About /> },
       { path: '/features', element: <Features /> },
       { path: '/contact', element: <Contact /> },
+      { path: '/login', element: <Login /> },
+      { path: '/signup', element: <Signup /> }
     ]
   }
 ]);
