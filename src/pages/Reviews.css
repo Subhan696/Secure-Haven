@@ -1,0 +1,45 @@
+.reviews-page {
+    padding: 60px 40px;
+    background-color: #fdfdfd;
+    text-align: center;
+    min-height: 100vh;
+  }
+  
+  .reviews-page h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+  }
+  
+  .review-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+  }
+  
+  .review-card {
+    background-color: #f1f1f1;
+    border-radius: 10px;
+    padding: 20px;
+    width: 280px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+  
+  .review-stars {
+    color: #f8c32d;
+    font-size: 1.2rem;
+    margin: 10px 0;
+  }
+  
+  .review-card span {
+    font-style: italic;
+    color: #555;
+  }
+  
+  @media (max-width: 768px) {
+    .review-list {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+  

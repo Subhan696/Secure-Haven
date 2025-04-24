@@ -12,6 +12,7 @@ import Features from './pages/Features';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Reviews from './pages/Reviews';
 import './App.css';
 
 const Layout = () => (
@@ -34,7 +35,8 @@ const router = createBrowserRouter([
       { path: '/features', element: <Features /> },
       { path: '/contact', element: <Contact /> },
       { path: '/login', element: <Login /> },
-      { path: '/signup', element: <Signup /> }
+      { path: '/signup', element: <Signup /> },
+      { path: '/reviews', element: <Reviews />}
     ]
   }
 ]);
