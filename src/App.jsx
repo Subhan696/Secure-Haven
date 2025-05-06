@@ -1,21 +1,36 @@
+// src/App.jsx
 import React from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
   Outlet
 } from 'react-router-dom';
-import Header from './components/Header';
-import Footer from './components/Footer';
+
+import Header from './components/Header'; // Public header
+import Footer from './components/Footer'; // Public footer
+import DashboardHeader from './components/DashboardHeader'; // Dashboard header
+import DashboardFooter from './components/DashboardFooter'; // Dashboard footer
+import PrivateRoute from './components/PrivateRoute';
+
+// Public Pages
 import Home from './pages/Home';
 import About from './pages/About';
-import Features from './pages/Features';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Reviews from './pages/Reviews';
+
+// Election Management Pages
+import Dashboard from './pages/Dashboard';
+import CreateElection from './pages/CreateElection';
+import ElectionList from './pages/ElectionList';
+import ElectionDetails from './pages/ElectionDetails';
+import VoterRegistration from './pages/VoterRegistration';
+import Results from './pages/Results';
+
 import './App.css';
 
-const Layout = () => (
+// Layout for public pages (includes header/footer)
+const PublicLayout = () => (
   <div className="App">
     <Header />
     <main>
@@ -25,18 +40,45 @@ const Layout = () => (
   </div>
 );
 
+// Layout for dashboard pages (custom header/footer)
+const DashboardLayout = () => (
+  <div className="App dashboard-app">
+    <DashboardHeader />
+    <main>
+      <Outlet />
+    </main>
+    <DashboardFooter />
+  </div>
+);
+
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Layout />,
+    element: <PublicLayout />,
     children: [
       { path: '/', element: <Home /> },
       { path: '/about', element: <About /> },
-      { path: '/features', element: <Features /> },
       { path: '/contact', element: <Contact /> },
       { path: '/login', element: <Login /> },
-      { path: '/signup', element: <Signup /> },
-      { path: '/reviews', element: <Reviews />}
+      { path: '/signup', element: <Signup /> }
+    ]
+  },
+  {
+    path: '/dashboard',
+    element: <PrivateRoute />,
+    children: [
+      {
+        path: '',
+        element: <DashboardLayout />,
+        children: [
+          { path: '', element: <Dashboard /> },
+          { path: 'create-election', element: <CreateElection /> },
+          { path: 'elections', element: <ElectionList /> },
+          { path: 'elections/:id', element: <ElectionDetails /> },
+          { path: 'voter-registration', element: <VoterRegistration /> },
+          { path: 'results', element: <Results /> }
+        ]
+      }
     ]
   }
 ]);

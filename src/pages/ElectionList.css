@@ -1,0 +1,190 @@
+.election-list {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.election-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.election-list-header h1 {
+  color: #2c3e50;
+  margin: 0;
+}
+
+.create-election-btn {
+  background-color: #2ecc71;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.create-election-btn:hover {
+  background-color: #27ae60;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.filter-controls button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-controls button.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.elections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.election-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: transform 0.2s;
+}
+
+.election-card:hover {
+  transform: translateY(-2px);
+}
+
+.election-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.election-header h2 {
+  color: #2c3e50;
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-active {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.status-upcoming {
+  background-color: #f1c40f;
+  color: #2c3e50;
+}
+
+.status-completed {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.election-description {
+  color: #7f8c8d;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.election-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-item .label {
+  color: #7f8c8d;
+  font-size: 0.75rem;
+}
+
+.election-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.view-btn,
+.vote-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 4px;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.view-btn {
+  background-color: #3498db;
+  color: white;
+}
+
+.vote-btn {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.view-btn:hover {
+  background-color: #2980b9;
+}
+
+.vote-btn:hover {
+  background-color: #27ae60;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #7f8c8d;
+}
+
+@media (max-width: 768px) {
+  .election-list {
+    padding: 1rem;
+  }
+
+  .election-list-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .filter-controls {
+    flex-wrap: wrap;
+  }
+
+  .elections-grid {
+    grid-template-columns: 1fr;
+  }
+} 

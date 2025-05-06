@@ -11,8 +11,10 @@ const Login = () => {
     e.preventDefault();
     // 🔐 Simulate authentication
     if (email && password) {
+      // Store user email in localStorage
+      localStorage.setItem('userEmail', email);
       console.log('Logging in with:', { email, password });
-      navigate('/'); // 🔄 Redirect to home
+      navigate('/dashboard'); // 🔄 Redirect to home
     } else {
       alert('Please enter email and password.');
     }

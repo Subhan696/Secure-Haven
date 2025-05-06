@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Header.css';
 
-const Header = () => {
+const DashboardHeader = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const userEmail = localStorage.getItem('userEmail');
@@ -13,13 +13,12 @@ const Header = () => {
   };
 
   return (
-    <header className="main-header">
+    <header className="main-header dashboard-header-bar">
       <div className="header-left">
-        <img src="/logo192.png" alt="logo" className="header-logo" />
-        <span className="header-appname">election<span className="runner">runner</span></span>
+        <span className="dashboard-brand">Secure-Haven</span>
         <nav className="header-nav">
           <Link to="/dashboard" className="header-link">Dashboard</Link>
-          <Link to="/settings" className="header-link">Settings</Link>
+          
         </nav>
       </div>
       {userEmail && (
@@ -38,4 +37,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default DashboardHeader; 
