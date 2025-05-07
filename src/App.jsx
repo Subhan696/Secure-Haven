@@ -3,7 +3,8 @@ import React from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
-  Outlet
+  Outlet,
+  Navigate
 } from 'react-router-dom';
 
 import Header from './components/Header'; // Public header
@@ -26,6 +27,14 @@ import ElectionList from './pages/ElectionList';
 import ElectionDetails from './pages/ElectionDetails';
 import VoterRegistration from './pages/VoterRegistration';
 import Results from './pages/Results';
+import CreateElectionWizard from './pages/CreateElectionWizard';
+import ElectionOverview from './pages/ElectionOverview';
+import ElectionSettings from './pages/ElectionSettings';
+import ElectionVoters from './pages/ElectionVoters';
+import ElectionBallot from './pages/ElectionBallot';
+import ElectionPreview from './pages/ElectionPreview';
+import ElectionLaunch from './pages/ElectionLaunch';
+import AccountSettings from './pages/AccountSettings';
 
 import './App.css';
 
@@ -73,8 +82,21 @@ const router = createBrowserRouter([
         children: [
           { path: '', element: <Dashboard /> },
           { path: 'create-election', element: <CreateElection /> },
+          { path: 'create-election-wizard', element: <CreateElectionWizard /> },
           { path: 'elections', element: <ElectionList /> },
-          { path: 'elections/:id', element: <ElectionDetails /> },
+          { path: 'account-settings', element: <AccountSettings /> },
+          {
+            path: 'elections/:id',
+            children: [
+              { index: true, element: <Navigate to="overview" replace /> },
+              { path: 'overview', element: <ElectionOverview /> },
+              { path: 'settings', element: <ElectionSettings /> },
+              { path: 'ballot', element: <ElectionBallot /> },
+              { path: 'voters', element: <ElectionVoters /> },
+              { path: 'preview', element: <ElectionPreview /> },
+              { path: 'launch', element: <ElectionLaunch /> },
+            ]
+          },
           { path: 'voter-registration', element: <VoterRegistration /> },
           { path: 'results', element: <Results /> }
         ]

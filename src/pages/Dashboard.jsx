@@ -1,28 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import './Dashboard.css';
-
-const mockElections = [
-  {
-    id: 1,
-    title: 'TEST',
-    status: 'Building',
-    startDate: '04/24/25, 3:00 PM',
-    endDate: '05/04/25, 2:00 PM',
-  },
-];
 
 const Dashboard = () => {
   const [email, setEmail] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [elections, setElections] = useState(mockElections);
+  const [elections, setElections] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     if (userEmail) {
       setEmail(userEmail);
+    }
+    // Read elections from localStorage
+    const stored = localStorage.getItem('elections');
+    if (stored) {
+      setElections(JSON.parse(stored));
+    } else {
+      setElections([]);
     }
   }, []);
 
@@ -37,7 +34,7 @@ const Dashboard = () => {
     <div className="dashboard-bg">
       <div className="dashboard-header-row">
         <h1 className="dashboard-title">Dashboard</h1>
-        <button className="new-election-btn" onClick={() => navigate('/dashboard/create-election')}>
+        <button className="new-election-btn" onClick={() => navigate('/dashboard/create-election-wizard')}>
           <span className="plus-icon">&#43;</span> New Election
         </button>
       </div>
@@ -59,22 +56,30 @@ const Dashboard = () => {
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
         >
-          <option value="">Filter by status...</option>
-          <option value="Building">Building</option>
-          <option value="Active">Active</option>
-          <option value="Completed">Completed</option>
+          <option value="">All Status</option>
+          <option value="draft">Draft</option>
+          <option value="live">Live</option>
         </select>
       </div>
       <div className="dashboard-list">
         {filteredElections.map(election => (
           <div className="election-card" key={election.id}>
-            <div className="election-title">{election.title}</div>
-            <span className="election-badge">{election.status}</span>
-            <div className="election-dates">
-              <span className="election-date-label">START DATE</span>
-              <span className="election-date">{election.startDate}</span>
-              <span className="election-date-label">END DATE</span>
-              <span className="election-date">{election.endDate}</span>
+            <div className="election-card-header">
+              <h3>{election.title}</h3>
+              <div className={`election-status ${election.status === 'live' ? 'live' : 'draft'}`}>
+                {election.status === 'live' ? 'Live' : 'Draft'}
+              </div>
+            </div>
+            <div className="election-card-details">
+              <p>Start: {new Date(election.startDate).toLocaleDateString()}</p>
+              <p>End: {new Date(election.endDate).toLocaleDateString()}</p>
+              <p>Questions: {election.questions?.length || 0}</p>
+              <p>Voters: {election.voters?.length || 0}</p>
+            </div>
+            <div className="election-card-actions">
+              <Link to={`/dashboard/elections/${election.id}/overview`} className="view-btn">
+                View Details
+              </Link>
             </div>
           </div>
         ))}

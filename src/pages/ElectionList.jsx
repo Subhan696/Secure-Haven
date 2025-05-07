@@ -8,41 +8,13 @@ const ElectionList = () => {
   const [filter, setFilter] = useState('all'); // all, active, upcoming, completed
 
   useEffect(() => {
-    // TODO: Replace with actual API call
-    const mockElections = [
-      {
-        id: 1,
-        title: 'Student Council Election 2024',
-        description: 'Annual election for student council members',
-        startDate: '2024-03-01T00:00:00',
-        endDate: '2024-03-07T23:59:59',
-        status: 'upcoming',
-        totalVoters: 0,
-        totalVotes: 0
-      },
-      {
-        id: 2,
-        title: 'Class Representative Election',
-        description: 'Election for class representatives',
-        startDate: '2024-02-15T00:00:00',
-        endDate: '2024-02-20T23:59:59',
-        status: 'active',
-        totalVoters: 150,
-        totalVotes: 120
-      },
-      {
-        id: 3,
-        title: 'Sports Committee Election',
-        description: 'Election for sports committee members',
-        startDate: '2024-01-01T00:00:00',
-        endDate: '2024-01-07T23:59:59',
-        status: 'completed',
-        totalVoters: 200,
-        totalVotes: 180
-      }
-    ];
-
-    setElections(mockElections);
+    // Read from localStorage
+    const stored = localStorage.getItem('elections');
+    if (stored) {
+      setElections(JSON.parse(stored));
+    } else {
+      setElections([]);
+    }
     setLoading(false);
   }, []);
 
@@ -72,7 +44,7 @@ const ElectionList = () => {
     <div className="election-list">
       <div className="election-list-header">
         <h1>Elections</h1>
-        <Link to="/dashboard/create-election" className="create-election-btn">
+        <Link to="/dashboard/create-election-wizard" className="create-election-btn">
           Create New Election
         </Link>
       </div>
@@ -133,7 +105,7 @@ const ElectionList = () => {
               </div>
             </div>
             <div className="election-actions">
-              <Link to={`/dashboard/elections/${election.id}`} className="view-btn">
+              <Link to={`/dashboard/elections/${election.id}/overview`} className="view-btn">
                 View Details
               </Link>
               {election.status === 'active' && (

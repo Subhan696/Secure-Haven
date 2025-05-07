@@ -287,4 +287,139 @@
   .candidates-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.election-details-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f7f9fa;
+}
+
+.election-details-main {
+  flex: 1;
+  margin-left: 220px;
+  padding: 2.5rem 2rem 2rem 2rem;
+  transition: margin-left 0.3s;
+}
+
+.sidebar-toggle {
+  display: none;
+  background: #23395d;
+  color: #fff;
+  border: none;
+  font-size: 2rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 4px;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .election-details-main {
+    margin-left: 0;
+    padding: 1.2rem 0.5rem 1.5rem 0.5rem;
+  }
+  .sidebar-toggle {
+    display: block;
+  }
+}
+
+.step-indicator {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.step {
+  background: #e0e7ef;
+  color: #222;
+  padding: 0.5rem 1.2rem;
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 1rem;
+}
+.step.active {
+  background: #3498db;
+  color: #fff;
+}
+
+.election-details-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+  padding: 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+.details-table td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 1.08rem;
+}
+.details-table td:first-child {
+  font-weight: 600;
+  color: #23395d;
+  width: 160px;
+}
+
+.edit-btn, .save-btn, .cancel-btn {
+  background: #3498db;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.7rem 1.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  margin-right: 1rem;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.save-btn {
+  background: #18c018;
+}
+.cancel-btn {
+  background: #e74c3c;
+  margin-right: 0;
+}
+.edit-btn:hover, .save-btn:hover {
+  background: #217dbb;
+}
+.cancel-btn:hover {
+  background: #c0392b;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #23395d;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+.form-group input {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1.5px solid #cfd8dc;
+  border-radius: 4px;
+  font-size: 1.08rem;
+  margin-top: 0.2rem;
+}
+.form-row {
+  display: flex;
+  gap: 1.5rem;
+}
+.form-row .form-group {
+  flex: 1;
+}
+@media (max-width: 600px) {
+  .election-details-card {
+    padding: 1rem;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 } 

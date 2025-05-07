@@ -1,181 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import ElectionSidebar from '../components/ElectionSidebar';
 import './ElectionDetails.css';
 
 const ElectionDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [election, setElection] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [form, setForm] = useState({ title: '', startDate: '', endDate: '', timezone: '' });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // TODO: Replace with actual API call
-    const mockElection = {
-      id: parseInt(id),
-      title: 'Student Council Election 2024',
-      description: 'Annual election for student council members. Vote for your preferred candidates to represent the student body.',
-      startDate: '2024-03-01T00:00:00',
-      endDate: '2024-03-07T23:59:59',
-      status: 'active',
-      totalVoters: 150,
-      totalVotes: 120,
-      candidates: [
-        {
-          id: 1,
-          name: 'John Doe',
-          description: 'Current class representative with 2 years of experience',
-          votes: 45
-        },
-        {
-          id: 2,
-          name: 'Jane Smith',
-          description: 'Active member of student clubs and organizations',
-          votes: 35
-        },
-        {
-          id: 3,
-          name: 'Mike Johnson',
-          description: 'Former sports committee member',
-          votes: 40
-        }
-      ]
-    };
-
-    setElection(mockElection);
-    setLoading(false);
+    const stored = localStorage.getItem('elections');
+    if (stored) {
+      const found = JSON.parse(stored).find(e => String(e.id) === String(id));
+      if (found) {
+        setElection(found);
+        setForm({
+          title: found.title,
+          startDate: found.startDate,
+          endDate: found.endDate,
+          timezone: found.timezone,
+        });
+      }
+    }
   }, [id]);
 
-  const handleVote = (candidateId) => {
-    setSelectedCandidate(candidateId);
-    setShowConfirmModal(true);
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
   };
 
-  const confirmVote = () => {
-    // TODO: Add API call to submit vote
-    console.log('Voting for candidate:', selectedCandidate);
-    setShowConfirmModal(false);
-    // Refresh election data after voting
+  const handleSave = () => {
+    const stored = localStorage.getItem('elections');
+    if (stored) {
+      const arr = JSON.parse(stored).map(e =>
+        String(e.id) === String(id) ? { ...e, ...form } : e
+      );
+      localStorage.setItem('elections', JSON.stringify(arr));
+      setElection(arr.find(e => String(e.id) === String(id)));
+      setEdit(false);
+    }
   };
 
-  if (loading) {
-    return <div className="loading">Loading election details...</div>;
-  }
-
-  if (!election) {
-    return <div className="error">Election not found</div>;
-  }
+  if (!election) return <div className="loading">Election not found</div>;
 
   return (
-    <div className="election-details">
-      <div className="election-header">
-        <div className="header-content">
-          <h1>{election.title}</h1>
-          <span className={`status-badge ${election.status}`}>
-            {election.status}
-          </span>
+    <div className="election-details-layout">
+      <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <div className="election-details-main">
+        <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
+          &#9776;
+        </button>
+        <div className="step-indicator">
+          <div className="step active">1. Confirm Details</div>
+          <div className="step">2. Check Ballot</div>
         </div>
-        <Link to="/dashboard/elections" className="back-btn">
-          Back to Elections
-        </Link>
-      </div>
-
-      <div className="election-info">
-        <div className="info-section">
-          <h2>Description</h2>
-          <p>{election.description}</p>
-        </div>
-
-        <div className="info-section">
-          <h2>Election Period</h2>
-          <div className="date-info">
-            <div className="date-item">
-              <span className="label">Start Date:</span>
-              <span>{new Date(election.startDate).toLocaleDateString()}</span>
-            </div>
-            <div className="date-item">
-              <span className="label">End Date:</span>
-              <span>{new Date(election.endDate).toLocaleDateString()}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="info-section">
-          <h2>Voting Statistics</h2>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <span className="stat-value">{election.totalVoters}</span>
-              <span className="stat-label">Total Voters</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">{election.totalVotes}</span>
-              <span className="stat-label">Total Votes</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">
-                {((election.totalVotes / election.totalVoters) * 100).toFixed(1)}%
-              </span>
-              <span className="stat-label">Voter Turnout</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="info-section">
-          <h2>Candidates</h2>
-          <div className="candidates-grid">
-            {election.candidates.map(candidate => (
-              <div key={candidate.id} className="candidate-card">
-                <h3>{candidate.name}</h3>
-                <p>{candidate.description}</p>
-                <div className="candidate-stats">
-                  <div className="vote-count">
-                    <span className="count">{candidate.votes}</span>
-                    <span className="label">votes</span>
-                  </div>
-                  <div className="vote-percentage">
-                    <span className="percentage">
-                      {((candidate.votes / election.totalVotes) * 100).toFixed(1)}%
-                    </span>
-                    <span className="label">of total votes</span>
-                  </div>
-                </div>
-                {election.status === 'active' && (
-                  <button
-                    className="vote-btn"
-                    onClick={() => handleVote(candidate.id)}
-                  >
-                    Vote
-                  </button>
-                )}
+        <h2>Confirm Election Details</h2>
+        <div className="election-details-card">
+          {edit ? (
+            <>
+              <div className="form-group">
+                <label>Title</label>
+                <input name="title" value={form.title} onChange={handleChange} />
               </div>
-            ))}
-          </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input type="datetime-local" name="startDate" value={form.startDate} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input type="datetime-local" name="endDate" value={form.endDate} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Timezone</label>
+                <input name="timezone" value={form.timezone} onChange={handleChange} />
+              </div>
+              <button className="save-btn" onClick={handleSave}>Save</button>
+              <button className="cancel-btn" onClick={() => setEdit(false)}>Cancel</button>
+            </>
+          ) : (
+            <>
+              <table className="details-table">
+                <tbody>
+                  <tr><td>Title</td><td>{election.title}</td></tr>
+                  <tr><td>Start Date</td><td>{election.startDate ? new Date(election.startDate).toLocaleString() : ''}</td></tr>
+                  <tr><td>End Date</td><td>{election.endDate ? new Date(election.endDate).toLocaleString() : ''}</td></tr>
+                  <tr><td>Timezone</td><td>{election.timezone}</td></tr>
+                </tbody>
+              </table>
+              <button className="edit-btn" onClick={() => setEdit(true)}>Edit Info</button>
+            </>
+          )}
         </div>
       </div>
-
-      {showConfirmModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Confirm Your Vote</h3>
-            <p>
-              Are you sure you want to vote for{' '}
-              {election.candidates.find(c => c.id === selectedCandidate)?.name}?
-            </p>
-            <p className="warning">
-              Note: Once you submit your vote, it cannot be changed.
-            </p>
-            <div className="modal-actions">
-              <button className="cancel-btn" onClick={() => setShowConfirmModal(false)}>
-                Cancel
-              </button>
-              <button className="confirm-btn" onClick={confirmVote}>
-                Confirm Vote
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

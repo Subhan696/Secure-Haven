@@ -1,0 +1,106 @@
+.settings-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #222;
+}
+
+.settings-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.settings-tabs {
+  min-width: 200px;
+  background: #f7f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+  padding: 1.2rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-tab {
+  padding: 0.7rem 1.2rem;
+  border-radius: 4px;
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: #23395d;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.settings-tab.active, .settings-tab:hover {
+  background: #3498db;
+  color: #fff;
+}
+
+.settings-panel {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+  padding: 2rem 2.5rem 2rem 2.5rem;
+  min-width: 350px;
+}
+
+.settings-panel-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #23395d;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #23395d;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+.form-group input, .form-group textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1.5px solid #cfd8dc;
+  border-radius: 4px;
+  font-size: 1.08rem;
+  margin-top: 0.2rem;
+}
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+.desc-count {
+  font-size: 0.95rem;
+  color: #888;
+  margin-top: 0.3rem;
+}
+.settings-save-btn {
+  background: #18c018;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.7rem 2.2rem;
+  font-weight: 500;
+  font-size: 1.1rem;
+  margin-top: 1.2rem;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.settings-save-btn:hover {
+  background: #13a013;
+}
+@media (max-width: 900px) {
+  .settings-content {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .settings-panel {
+    padding: 1rem;
+    min-width: 0;
+  }
+  .settings-tabs {
+    min-width: 0;
+    padding: 0.7rem 0.2rem;
+  }
+} 

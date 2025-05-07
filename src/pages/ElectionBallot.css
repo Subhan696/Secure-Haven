@@ -1,0 +1,193 @@
+.election-details-layout {
+  display: flex;
+  min-height: calc(100vh - 64px);
+}
+
+.election-details-main {
+  flex: 1;
+  padding: 2rem;
+  position: relative;
+}
+
+.sidebar-toggle {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  z-index: 100;
+}
+
+.ballot-title {
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.ballot-panel {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.ballot-add-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #eee;
+}
+
+.ballot-question-input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.ballot-option-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.ballot-option-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.ballot-add-option-btn {
+  background: none;
+  border: 1px solid #4CAF50;
+  color: #4CAF50;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 1rem;
+  font-size: 0.9rem;
+}
+
+.ballot-add-option-btn:hover {
+  background: #4CAF50;
+  color: white;
+}
+
+.ballot-add-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.ballot-add-btn:hover {
+  background: #45a049;
+}
+
+.ballot-remove-btn {
+  background: none;
+  border: 1px solid #f44336;
+  color: #f44336;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ballot-remove-btn:hover {
+  background: #f44336;
+  color: white;
+}
+
+.ballot-error {
+  color: #f44336;
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background: #ffebee;
+  border-radius: 4px;
+}
+
+.ballot-questions-list {
+  margin-top: 2rem;
+}
+
+.ballot-questions-list h3 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.ballot-question-item {
+  background: #f9f9f9;
+  border-radius: 4px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.ballot-question-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.ballot-options-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem 0;
+}
+
+.ballot-options-list li {
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.edit-btn {
+  background: none;
+  border: 1px solid #2196F3;
+  color: #2196F3;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 1rem;
+  font-size: 0.9rem;
+}
+
+.edit-btn:hover {
+  background: #2196F3;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .sidebar-toggle {
+    display: block;
+  }
+
+  .election-details-main {
+    padding: 1rem;
+  }
+
+  .ballot-panel {
+    padding: 1rem;
+  }
+
+  .ballot-option-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ballot-option-input {
+    width: 100%;
+  }
+} 

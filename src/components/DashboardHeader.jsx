@@ -14,20 +14,17 @@ const DashboardHeader = () => {
 
   return (
     <header className="main-header dashboard-header-bar">
-      <div className="header-left">
-        <span className="dashboard-brand">Secure-Haven</span>
-        <nav className="header-nav">
-          <Link to="/dashboard" className="header-link">Dashboard</Link>
-          
-        </nav>
-      </div>
+      <span className="dashboard-brand">Secure-Haven</span>
+      <nav className="header-nav">
+        <Link to="/dashboard" className="header-link">Dashboard</Link>
+      </nav>
       {userEmail && (
         <div className="header-user" onClick={() => setDropdownOpen(!dropdownOpen)}>
           <span className="header-user-icon">📧</span>
           <span className="header-username">{userEmail.split('@')[0]}</span>
           {dropdownOpen && (
             <div className="header-dropdown">
-              <button onClick={() => { setDropdownOpen(false); navigate('/settings'); }}>Account Settings</button>
+              <button onClick={() => { setDropdownOpen(false); navigate('/dashboard/account-settings'); }}>Account Settings</button>
               <button onClick={handleLogout}>Logout</button>
             </div>
           )}
