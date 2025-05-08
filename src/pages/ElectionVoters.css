@@ -5,67 +5,217 @@
   color: #222;
 }
 
-.voters-panel {
+.voters-content {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(44,62,80,0.06);
-  padding: 2rem 2.5rem 2rem 2.5rem;
-  min-width: 350px;
+  padding: 2rem;
 }
 
-.voters-form-row {
+.add-voter-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #eee;
+}
+
+.add-voter-section h3 {
+  font-size: 1.2rem;
+  color: #23395d;
+  margin-bottom: 1rem;
+}
+
+.form-group {
   display: flex;
   gap: 1rem;
-  margin-bottom: 1.2rem;
 }
-.voters-form-row input {
-  padding: 0.6rem;
-  border: 1.5px solid #cfd8dc;
+
+.form-group input {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 1.08rem;
+  font-size: 1rem;
 }
-.voters-add-btn {
-  background: #18c018;
+
+.btn-primary {
+  background: #23395d;
   color: #fff;
   border: none;
+  padding: 0.8rem 1.5rem;
   border-radius: 4px;
-  padding: 0.7rem 1.5rem;
-  font-weight: 500;
-  font-size: 1.08rem;
   cursor: pointer;
-  transition: background 0.18s;
+  font-size: 1rem;
+  transition: background 0.2s;
 }
-.voters-add-btn:hover {
-  background: #13a013;
+
+.btn-primary:hover {
+  background: #1a2b45;
 }
-.voters-error {
-  color: #e74c3c;
-  margin-bottom: 1rem;
-  font-size: 1.05rem;
-}
-.voters-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1.2rem;
-}
-.voters-table th, .voters-table td {
-  padding: 0.7rem 1rem;
-  border-bottom: 1px solid #e5e5e5;
-  font-size: 1.08rem;
-  text-align: left;
-}
-.voters-table th {
-  background: #f7f9fa;
+
+.voters-list h3 {
+  font-size: 1.2rem;
   color: #23395d;
-  font-weight: 600;
+  margin-bottom: 1rem;
 }
-@media (max-width: 900px) {
-  .voters-panel {
-    padding: 1rem;
-    min-width: 0;
-  }
-  .voters-form-row {
+
+.no-voters {
+  color: #666;
+  text-align: center;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.voters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.voter-card {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.voter-info {
+  flex: 1;
+}
+
+.voter-email {
+  color: #23395d;
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+}
+
+.voter-key {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.voter-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-voter {
+  background: #3498db;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.edit-voter:hover {
+  background: #2980b9;
+}
+
+.remove-voter {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.remove-voter:hover {
+  background: #c82333;
+}
+
+.edit-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  background: #28a745;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.save-btn:hover {
+  background: #218838;
+}
+
+.cancel-btn {
+  background: #6c757d;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #5a6268;
+}
+
+.message {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+@media (max-width: 768px) {
+  .form-group {
     flex-direction: column;
-    gap: 0.7rem;
+  }
+  
+  .voters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .voter-card {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .voter-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 } 

@@ -1,0 +1,122 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f6fa;
+  padding: 1rem;
+}
+
+.login-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-card h1 {
+  text-align: center;
+  color: #23395d;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.login-type-toggle {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.login-type-toggle button {
+  flex: 1;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.login-type-toggle button.active {
+  background: #23395d;
+  color: white;
+  border-color: #23395d;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #23395d;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #23395d;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 0.8rem;
+  background: #23395d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1a2b45;
+}
+
+.error-message {
+  background: #fee;
+  color: #c00;
+  padding: 0.8rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.signup-link {
+  text-align: center;
+  margin-top: 1rem;
+  color: #666;
+}
+
+.signup-link a {
+  color: #23395d;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.signup-link a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem;
+  }
+
+  .login-type-toggle {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+} 

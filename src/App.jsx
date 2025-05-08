@@ -35,6 +35,8 @@ import ElectionBallot from './pages/ElectionBallot';
 import ElectionPreview from './pages/ElectionPreview';
 import ElectionLaunch from './pages/ElectionLaunch';
 import AccountSettings from './pages/AccountSettings';
+import VoterDashboard from './pages/VoterDashboard';
+import VoterElection from './pages/VoterElection';
 
 import './App.css';
 
@@ -102,6 +104,15 @@ const router = createBrowserRouter([
         ]
       }
     ]
+  },
+  // Voter routes
+  {
+    path: '/voter-dashboard',
+    element: <VoterDashboard />
+  },
+  {
+    path: '/voter-election/:electionId',
+    element: <VoterElection />
   }
 ]);
 

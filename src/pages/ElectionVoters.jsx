@@ -1,92 +1,160 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { getVoterKey } from '../utils/voterKey';
 import ElectionSidebar from '../components/ElectionSidebar';
 import './ElectionVoters.css';
 
 const ElectionVoters = () => {
   const { id } = useParams();
   const [election, setElection] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [voters, setVoters] = useState([]);
-  const [editIdx, setEditIdx] = useState(null);
-  const [editName, setEditName] = useState('');
+  const [newVoter, setNewVoter] = useState('');
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [editingVoter, setEditingVoter] = useState(null);
   const [editEmail, setEditEmail] = useState('');
-  const [editPassword, setEditPassword] = useState('');
 
   useEffect(() => {
     const stored = localStorage.getItem('elections');
     if (stored) {
       const found = JSON.parse(stored).find(e => String(e.id) === String(id));
-      setElection(found);
-      setVoters(found && found.voters ? found.voters : []);
+      if (found) {
+        setElection(found);
+        setVoters(found.voters || []);
+      }
     }
   }, [id]);
 
-  const handleAddVoter = () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('All fields are required.');
+  const handleAddVoter = (e) => {
+    e.preventDefault();
+    if (!newVoter.trim()) return;
+
+    const email = newVoter.trim().toLowerCase();
+    
+    // Check if voter already exists
+    if (voters.some(v => v.email === email)) {
+      setMessage({
+        type: 'error',
+        text: 'This voter is already added to the election.'
+      });
       return;
     }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-    const newVoters = [...voters, { name: name.trim(), email: email.trim(), password: password.trim() }];
-    setVoters(newVoters);
-    setName('');
-    setEmail('');
-    setPassword('');
-    setError('');
-    updateElection({ voters: newVoters });
+
+    // Generate or get existing voter key
+    const voterKey = getVoterKey(email);
+
+    const updatedVoters = [...voters, { email, key: voterKey }];
+    
+    // Update election in localStorage
+    const elections = JSON.parse(localStorage.getItem('elections') || '[]');
+    const updatedElections = elections.map(e => {
+      if (String(e.id) === String(id)) {
+        return { ...e, voters: updatedVoters };
+      }
+      return e;
+    });
+    
+    localStorage.setItem('elections', JSON.stringify(updatedElections));
+    setVoters(updatedVoters);
+    setNewVoter('');
+    setMessage({
+      type: 'success',
+      text: 'Voter added successfully!'
+    });
+
+    // Update the election state to reflect the changes
+    setElection(prev => ({
+      ...prev,
+      voters: updatedVoters
+    }));
   };
 
-  const handleEditVoter = idx => {
-    setEditIdx(idx);
-    setEditName(voters[idx].name);
-    setEditEmail(voters[idx].email);
-    setEditPassword(voters[idx].password);
+  const handleEditVoter = (voter) => {
+    setEditingVoter(voter);
+    setEditEmail(voter.email);
   };
 
-  const handleSaveVoter = idx => {
-    if (!editName.trim() || !editEmail.trim() || !editPassword.trim()) {
-      setError('All fields are required.');
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!editEmail.trim()) return;
+
+    const newEmail = editEmail.trim().toLowerCase();
+    
+    // Check if the new email already exists (excluding the current voter)
+    if (voters.some(v => v.email === newEmail && v.email !== editingVoter.email)) {
+      setMessage({
+        type: 'error',
+        text: 'This email is already registered for another voter.'
+      });
       return;
     }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(editEmail)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-    const updated = voters.map((v, i) =>
-      i === idx ? { name: editName, email: editEmail, password: editPassword } : v
+
+    // Generate or get existing voter key for the new email
+    const voterKey = getVoterKey(newEmail);
+
+    const updatedVoters = voters.map(v => 
+      v.email === editingVoter.email 
+        ? { email: newEmail, key: voterKey }
+        : v
     );
-    setVoters(updated);
-    setEditIdx(null);
-    setError('');
-    updateElection({ voters: updated });
+    
+    // Update election in localStorage
+    const elections = JSON.parse(localStorage.getItem('elections') || '[]');
+    const updatedElections = elections.map(e => {
+      if (String(e.id) === String(id)) {
+        return { ...e, voters: updatedVoters };
+      }
+      return e;
+    });
+    
+    localStorage.setItem('elections', JSON.stringify(updatedElections));
+    setVoters(updatedVoters);
+    setEditingVoter(null);
+    setEditEmail('');
+    setMessage({
+      type: 'success',
+      text: 'Voter updated successfully!'
+    });
+
+    // Update the election state to reflect the changes
+    setElection(prev => ({
+      ...prev,
+      voters: updatedVoters
+    }));
   };
 
-  const handleDeleteVoter = idx => {
-    const updated = voters.filter((_, i) => i !== idx);
-    setVoters(updated);
-    setEditIdx(null);
-    setError('');
-    updateElection({ voters: updated });
+  const handleCancelEdit = () => {
+    setEditingVoter(null);
+    setEditEmail('');
   };
 
-  function updateElection(fields) {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const arr = JSON.parse(stored).map(e =>
-        String(e.id) === String(id) ? { ...e, ...fields } : e
-      );
-      localStorage.setItem('elections', JSON.stringify(arr));
-      setElection(arr.find(e => String(e.id) === String(id)));
-    }
-  }
+  const handleRemoveVoter = (email) => {
+    const updatedVoters = voters.filter(v => v.email !== email);
+    
+    // Update election in localStorage
+    const elections = JSON.parse(localStorage.getItem('elections') || '[]');
+    const updatedElections = elections.map(e => {
+      if (String(e.id) === String(id)) {
+        return { ...e, voters: updatedVoters };
+      }
+      return e;
+    });
+    
+    localStorage.setItem('elections', JSON.stringify(updatedElections));
+    setVoters(updatedVoters);
+    setMessage({
+      type: 'success',
+      text: 'Voter removed successfully!'
+    });
+
+    // Update the election state to reflect the changes
+    setElection(prev => ({
+      ...prev,
+      voters: updatedVoters
+    }));
+  };
+
+  if (!election) return <div className="loading">Election not found</div>;
 
   return (
     <div className="election-details-layout">
@@ -95,70 +163,81 @@ const ElectionVoters = () => {
         <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
           &#9776;
         </button>
-        <h2 className="voters-title">Voters</h2>
-        <div className="voters-panel">
-          <div className="voters-form-row">
-            <input
-              type="text"
-              placeholder="Name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-            <button className="voters-add-btn" onClick={handleAddVoter}>Add Voter</button>
+        <h2 className="voters-title">Manage Voters</h2>
+        
+        {message.text && (
+          <div className={`message ${message.type}`}>
+            {message.text}
           </div>
-          {error && <div className="voters-error">{error}</div>}
-          <table className="voters-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Password</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {voters.length === 0 && (
-                <tr><td colSpan={4} style={{ color: '#888', textAlign: 'center' }}>No voters added.</td></tr>
-              )}
-              {voters.map((v, idx) => (
-                <tr key={idx}>
-                  {editIdx === idx ? (
-                    <>
-                      <td><input type="text" value={editName} onChange={e => setEditName(e.target.value)} /></td>
-                      <td><input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} /></td>
-                      <td><input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} /></td>
-                      <td>
-                        <button className="voters-add-btn" style={{ padding: '0.3rem 1rem', fontSize: '0.95rem' }} onClick={() => handleSaveVoter(idx)}>Save</button>
-                        <button className="cancel-btn" style={{ padding: '0.3rem 1rem', fontSize: '0.95rem', marginLeft: 6 }} onClick={() => setEditIdx(null)}>Cancel</button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{v.name}</td>
-                      <td>{v.email}</td>
-                      <td>{v.password}</td>
-                      <td>
-                        <button className="edit-btn" style={{ padding: '0.3rem 1rem', fontSize: '0.95rem' }} onClick={() => handleEditVoter(idx)}>Edit</button>
-                        <button className="cancel-btn" style={{ padding: '0.3rem 1rem', fontSize: '0.95rem', marginLeft: 6 }} onClick={() => handleDeleteVoter(idx)}>Delete</button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        )}
+
+        <div className="voters-content">
+          <div className="add-voter-section">
+            <h3>Add New Voter</h3>
+            <form onSubmit={handleAddVoter}>
+              <div className="form-group">
+                <input
+                  type="email"
+                  value={newVoter}
+                  onChange={(e) => setNewVoter(e.target.value)}
+                  placeholder="Enter voter's email"
+                  required
+                />
+                <button type="submit" className="btn-primary">Add Voter</button>
+              </div>
+            </form>
+          </div>
+
+          <div className="voters-list">
+            <h3>Current Voters</h3>
+            {voters.length === 0 ? (
+              <p className="no-voters">No voters added yet.</p>
+            ) : (
+              <div className="voters-grid">
+                {voters.map((voter, index) => (
+                  <div key={index} className="voter-card">
+                    {editingVoter && editingVoter.email === voter.email ? (
+                      <form onSubmit={handleSaveEdit} className="edit-form">
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          placeholder="Enter new email"
+                          required
+                          className="edit-input"
+                        />
+                        <div className="edit-actions">
+                          <button type="submit" className="save-btn">Save</button>
+                          <button type="button" onClick={handleCancelEdit} className="cancel-btn">Cancel</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="voter-info">
+                          <div className="voter-email">{voter.email}</div>
+                          <div className="voter-key">Key: {voter.key}</div>
+                        </div>
+                        <div className="voter-actions">
+                          <button
+                            className="edit-voter"
+                            onClick={() => handleEditVoter(voter)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="remove-voter"
+                            onClick={() => handleRemoveVoter(voter.email)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

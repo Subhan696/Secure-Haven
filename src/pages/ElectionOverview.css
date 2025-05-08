@@ -51,6 +51,161 @@
   color: #222;
 }
 
+.participation-bar {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.participation-progress {
+  height: 100%;
+  background: #4CAF50;
+  transition: width 0.3s ease;
+}
+
+.participation-text {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Results Section Styles */
+.results-section {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.3rem;
+  color: #23395d;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.question-results {
+  margin-bottom: 2rem;
+}
+
+.question-results:last-child {
+  margin-bottom: 0;
+}
+
+.question-title {
+  font-size: 1.1rem;
+  color: #23395d;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.options-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.option-result {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.option-text {
+  font-weight: 500;
+  color: #23395d;
+}
+
+.vote-count {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: #4b23c5;
+  transition: width 0.3s ease;
+}
+
+/* Voter Details Section Styles */
+.voter-details-section {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+  padding: 1.5rem;
+}
+
+.voter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.voter-card {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.voter-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.voter-name {
+  font-weight: 600;
+  color: #23395d;
+}
+
+.voter-email {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.voter-votes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vote-detail {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.question-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.option-selected {
+  color: #23395d;
+}
+
+.not-voted {
+  color: #dc3545;
+  font-style: italic;
+}
+
 .overview-side {
   flex: 1;
   display: flex;
@@ -108,5 +263,10 @@
     flex: 1;
     font-size: 1rem;
     padding: 1rem 0.7rem;
+  }
+  .voter-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
   }
 } 
