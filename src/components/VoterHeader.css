@@ -1,11 +1,10 @@
 .voter-header {
-  background: #2ecc71;
-  color: white;
+  background-color: #23395d;
   padding: 1rem 2rem;
+  color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .header-left {
@@ -16,7 +15,7 @@
 .header-left h1 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 600;
+  color: white;
 }
 
 .header-right {
@@ -32,12 +31,13 @@
 }
 
 .user-email {
-  font-weight: 500;
+  font-size: 0.9rem;
+  color: #fff;
 }
 
 .user-role {
   font-size: 0.8rem;
-  opacity: 0.8;
+  color: #b0c4d1;
 }
 
 .logout-btn {
@@ -54,19 +54,66 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
+.profile-dropdown {
+  position: relative;
+}
+
+.profile-button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  font-size: 1.2rem;
+}
+
+.profile-button:hover {
+  opacity: 0.8;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  margin-top: 0.5rem;
+  z-index: 1000;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  color: #23395d;
+  text-decoration: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.dropdown-icon {
+  font-size: 1.1rem;
+}
+
 @media (max-width: 768px) {
   .voter-header {
     padding: 1rem;
-    flex-direction: column;
-    gap: 1rem;
   }
 
-  .header-left {
-    width: 100%;
-  }
-
-  .header-right {
-    width: 100%;
-    justify-content: space-between;
+  .user-info {
+    display: none;
   }
 } 

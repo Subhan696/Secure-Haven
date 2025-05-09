@@ -10,20 +10,28 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userEmail = localStorage.getItem('userEmail');
-    if (userEmail) {
-      setEmail(userEmail);
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser || currentUser.role !== 'admin') {
+      navigate('/login');
+      return;
     }
+
+    setEmail(currentUser.email);
+    
     // Read elections from localStorage
     const stored = localStorage.getItem('elections');
     if (stored) {
-      setElections(JSON.parse(stored));
+      // Only show elections created by the current admin
+      const userElections = JSON.parse(stored).filter(election => 
+        election.createdBy === currentUser.email
+      );
+      setElections(userElections);
     } else {
       setElections([]);
     }
-  }, []);
+  }, [navigate]);
 
-  // Filter logic (static for now)
+  // Filter logic
   const filteredElections = elections.filter(election => {
     const matchesSearch = election.title.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter ? election.status === statusFilter : true;
@@ -31,43 +39,47 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="dashboard-bg">
-      <div className="dashboard-header-row">
-        <h1 className="dashboard-title">Dashboard</h1>
-        <button className="new-election-btn" onClick={() => navigate('/dashboard/create-election-wizard')}>
-          <span className="plus-icon">&#43;</span> New Election
-        </button>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1>Dashboard</h1>
+        <div className="user-info">
+          <span className="user-email">{email}</span>
+          <Link to="/dashboard/create-election-wizard" className="create-election-btn">
+            Create New Election
+          </Link>
+        </div>
       </div>
-      <div className="dashboard-controls-row">
-        <div className="dashboard-search-group">
+
+      <div className="dashboard-filters">
+        <div className="search-box">
           <input
             type="text"
-            className="dashboard-search"
-            placeholder="Search by election title..."
+            placeholder="Search elections..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
-          <button className="dashboard-search-btn" disabled>
-            <span role="img" aria-label="search">🔍</span>
-          </button>
         </div>
-        <select
-          className="dashboard-filter"
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-        >
-          <option value="">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="live">Live</option>
-        </select>
+        <div className="status-filter">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Status</option>
+            <option value="Building">Building</option>
+            <option value="Upcoming">Upcoming</option>
+            <option value="Live">Live</option>
+            <option value="Ended">Ended</option>
+          </select>
+        </div>
       </div>
+
       <div className="dashboard-list">
         {filteredElections.map(election => (
           <div className="election-card" key={election.id}>
             <div className="election-card-header">
               <h3>{election.title}</h3>
-              <div className={`election-status ${election.status === 'live' ? 'live' : 'draft'}`}>
-                {election.status === 'live' ? 'Live' : 'Draft'}
+              <div className={`election-status ${election.status.toLowerCase()}`}>
+                {election.status}
               </div>
             </div>
             <div className="election-card-details">

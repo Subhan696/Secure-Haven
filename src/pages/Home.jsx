@@ -19,9 +19,6 @@ const Home = () => {
           <Link to="/signup" className="btn start-btn">
             Create a Free Election
           </Link>
-          <p className="subtext">
-            * Elections with up to 20 voters are free. <Link to="/pricing">View Pricing</Link>
-          </p>
         </div>
 
         <div className="home-image">
@@ -52,6 +49,42 @@ const Home = () => {
             <h4>Fraud Detection</h4>
             <p>Our system flags suspicious activity automatically.</p>
           </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="how-it-works-section">
+        <h3>How It Works</h3>
+        <div className="steps-grid">
+          <div className="step-card">
+            <div className="step-number">01</div>
+            <h4>Create Your Election</h4>
+          </div>
+          <div className="step-card">
+            <div className="step-number">02</div>
+            <h4>Configure Ballot Questions</h4>
+          </div>
+          <div className="step-card">
+            <div className="step-number">03</div>
+            <h4>Add Voter List</h4>
+          </div>
+          <div className="step-card">
+            <div className="step-number">04</div>
+            <h4>Set Election Timeline</h4>
+          </div>
+          <div className="step-card">
+            <div className="step-number">05</div>
+            <h4>Launch Election</h4>
+          </div>
+          <div className="step-card">
+            <div className="step-number">06</div>
+            <h4>Monitor Results</h4>
+          </div>
+        </div>
+        <div className="guide-link-container">
+          <Link to="/user-guide" className="guide-link">
+            View Complete User Guide →
+          </Link>
         </div>
       </section>
 

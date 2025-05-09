@@ -47,30 +47,13 @@ const Signup = () => {
     const newUser = {
       name: formData.name,
       email: formData.email,
-      password: formData.password, // In a real app, this should be hashed
-      role: 'admin',
-      createdAt: new Date().toISOString()
+      password: formData.password,
+      role: 'admin'
     };
 
-    // Save user to localStorage
+    // Save user
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
-
-    // Initialize user's elections array
-    const elections = JSON.parse(localStorage.getItem('elections') || '[]');
-    const userElections = elections.filter(e => e.createdBy === formData.email);
-    if (userElections.length === 0) {
-      localStorage.setItem('elections', JSON.stringify([...elections, {
-        id: Date.now(),
-        title: 'My First Election',
-        description: 'Welcome to your first election!',
-        createdBy: formData.email,
-        createdAt: new Date().toISOString(),
-        status: 'draft',
-        voters: [],
-        candidates: []
-      }]));
-    }
 
     // Set current user
     localStorage.setItem('currentUser', JSON.stringify(newUser));
@@ -95,6 +78,7 @@ const Signup = () => {
               value={formData.name}
               onChange={handleChange}
               required
+              placeholder="Enter your full name"
             />
           </div>
           <div className="form-group">
@@ -106,6 +90,7 @@ const Signup = () => {
               value={formData.email}
               onChange={handleChange}
               required
+              placeholder="Enter your email"
             />
           </div>
           <div className="form-group">
@@ -117,7 +102,7 @@ const Signup = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              minLength="8"
+              placeholder="Create a password"
             />
           </div>
           <div className="form-group">
@@ -129,7 +114,7 @@ const Signup = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
-              minLength="8"
+              placeholder="Confirm your password"
             />
           </div>
           <button type="submit" className="btn-primary">Sign Up</button>

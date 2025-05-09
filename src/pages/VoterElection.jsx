@@ -12,29 +12,43 @@ const VoterElection = () => {
   const [loading, setLoading] = useState(true);
   const [hasVoted, setHasVoted] = useState(false);
   const [isElectionEnded, setIsElectionEnded] = useState(false);
+  const [isElectionLive, setIsElectionLive] = useState(false);
+  const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('elections');
     if (stored) {
       const found = JSON.parse(stored).find(e => String(e.id) === String(electionId));
       if (found) {
-        // Check if election has ended
+        // Check election status
         const now = new Date();
+        const startDate = new Date(found.startDate);
         const endDate = new Date(found.endDate);
-        const ended = now > endDate;
         
+        const isLive = now >= startDate && now <= endDate;
+        const ended = now > endDate;
+        const upcoming = now < startDate;
+        
+        // Update election status
+        let status = found.status;
         if (ended && found.status === 'Live') {
-          // Update election status to Ended
+          status = 'Ended';
+        } else if (isLive && found.status === 'Upcoming') {
+          status = 'Live';
+        }
+        
+        if (status !== found.status) {
           const elections = JSON.parse(stored);
           const updatedElections = elections.map(e => 
-            String(e.id) === String(electionId) ? { ...e, status: 'Ended' } : e
+            String(e.id) === String(electionId) ? { ...e, status } : e
           );
           localStorage.setItem('elections', JSON.stringify(updatedElections));
-          found.status = 'Ended';
+          found.status = status;
         }
         
         setElection(found);
         setIsElectionEnded(ended);
+        setIsElectionLive(isLive);
         
         // Initialize selected options
         const initialOptions = {};
@@ -57,7 +71,7 @@ const VoterElection = () => {
   }, [electionId]);
 
   const handleOptionSelect = (questionIndex, optionIndex) => {
-    if (isElectionEnded || hasVoted) return;
+    if (isElectionEnded || hasVoted || !isElectionLive) return;
     
     setSelectedOptions(prev => ({
       ...prev,
@@ -67,6 +81,11 @@ const VoterElection = () => {
 
   const handleVote = () => {
     if (isElectionEnded || hasVoted) return;
+
+    if (!isElectionLive) {
+      setError('This election is not yet open for voting');
+      return;
+    }
 
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser) {
@@ -106,16 +125,32 @@ const VoterElection = () => {
         return e;
       });
       localStorage.setItem('elections', JSON.stringify(updatedElections));
+      
+      // Update voting history
+      const votingHistory = JSON.parse(localStorage.getItem('votingHistory') || '[]');
+      const newVote = {
+        electionId: election.id,
+        voterEmail: currentUser.email,
+        selectedOptions: votes,
+        timestamp: new Date().toISOString()
+      };
+      votingHistory.push(newVote);
+      localStorage.setItem('votingHistory', JSON.stringify(votingHistory));
+
       setElection(prev => ({
         ...prev,
         votes: [...(prev.votes || []), ...votes]
       }));
       setHasVoted(true);
+      setSuccess('Your vote has been recorded successfully!');
+      setTimeout(() => {
+        navigate('/voter-dashboard');
+      }, 2000);
     }
   };
 
   const handleClearAll = () => {
-    if (isElectionEnded || hasVoted) return;
+    if (isElectionEnded || hasVoted || !isElectionLive) return;
     
     const clearedOptions = {};
     election.questions?.forEach((_, index) => {
@@ -162,6 +197,7 @@ const VoterElection = () => {
               Election Period: {new Date(election.startDate).toLocaleDateString()} - {new Date(election.endDate).toLocaleDateString()}
             </p>
             <p className="preview-timezone">Timezone: {election.timezone}</p>
+            <p className="preview-status">Status: {election.status}</p>
           </div>
         </div>
 
@@ -169,6 +205,11 @@ const VoterElection = () => {
           <div className="election-ended-message">
             <h2>Election has ended</h2>
             <p>The voting period for this election has concluded. You can view the results below.</p>
+          </div>
+        ) : !isElectionLive ? (
+          <div className="election-upcoming-message">
+            <h2>Election has not started yet</h2>
+            <p>This election will begin on {new Date(election.startDate).toLocaleString()}</p>
           </div>
         ) : hasVoted ? (
           <div className="voted-message">

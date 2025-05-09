@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const steps = [
   'Basic Info',
@@ -132,178 +133,172 @@ function BasicInfoForm({ onNext, onCancel, data, setData }) {
 }
 
 function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
-  const [questionText, setQuestionText] = useState('');
-  const [options, setOptions] = useState(['']);
   const [questions, setQuestions] = useState(data.questions || []);
-  const [error, setError] = useState('');
+  const [newQuestion, setNewQuestion] = useState('');
+  const [newOptions, setNewOptions] = useState(['']);
 
-  const handleOptionChange = (idx, value) => {
-    setOptions(opts => opts.map((opt, i) => (i === idx ? value : opt)));
-  };
-
-  const addOption = () => setOptions(opts => [...opts, '']);
-  const removeOption = (idx) => setOptions(opts => opts.filter((_, i) => i !== idx));
+  const handleAddOption = () => setNewOptions(opts => [...opts, '']);
+  const handleRemoveOption = idx => setNewOptions(opts => opts.filter((_, i) => i !== idx));
+  const handleOptionChange = (idx, value) => setNewOptions(opts => opts.map((opt, i) => i === idx ? value : opt));
 
   const handleAddQuestion = () => {
-    if (!questionText.trim()) {
-      setError('Question text is required.');
-      return;
-    }
-    if (options.length < 1 || options.some(opt => !opt.trim())) {
-      setError('Each question must have at least one non-empty option.');
-      return;
-    }
-    setQuestions(qs => [...qs, { text: questionText, options: options.filter(opt => opt.trim()) }]);
-    setQuestionText('');
-    setOptions(['']);
-    setError('');
-  };
+    if (!newQuestion.trim()) return;
+    if (newOptions.length < 1 || newOptions.some(opt => !opt.trim())) return;
 
-  const handleRemoveQuestion = (idx) => {
-    setQuestions(qs => qs.filter((_, i) => i !== idx));
-  };
-
-  const handleNext = () => {
-    if (questions.length === 0) {
-      setError('Please add at least one question.');
-      return;
-    }
-    setData(prev => ({ ...prev, questions }));
-    onNext();
+    const updated = [...questions, { text: newQuestion, options: newOptions.filter(opt => opt.trim()) }];
+    setQuestions(updated);
+    setNewQuestion('');
+    setNewOptions(['']);
+    setData(prev => ({ ...prev, questions: updated }));
   };
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Build Ballot</h2>
-      <div className="form-group">
-        <label>Question</label>
-        <input
-          type="text"
-          value={questionText}
-          onChange={e => setQuestionText(e.target.value)}
-          placeholder="Enter your question (e.g. Who should be President?)"
-        />
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ marginBottom: 16 }}>Add Questions</h3>
+        <div className="form-group">
+          <input
+            type="text"
+            value={newQuestion}
+            onChange={e => setNewQuestion(e.target.value)}
+            placeholder="Enter question"
+            style={{ width: '100%', padding: '0.7rem', borderRadius: 4, border: '1px solid #ddd' }}
+          />
+        </div>
+        <div style={{ marginTop: 16 }}>
+          {newOptions.map((opt, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="text"
+                value={opt}
+                onChange={e => handleOptionChange(idx, e.target.value)}
+                placeholder={`Option ${idx + 1}`}
+                style={{ flex: 1, padding: '0.7rem', borderRadius: 4, border: '1px solid #ddd' }}
+              />
+              {newOptions.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveOption(idx)}
+                  style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1rem', cursor: 'pointer' }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={handleAddOption}
+            style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', marginTop: 8, cursor: 'pointer' }}
+          >
+            Add Option
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={handleAddQuestion}
+          style={{ background: '#2ecc71', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', marginTop: 16, cursor: 'pointer' }}
+        >
+          Add Question
+        </button>
       </div>
-      <div className="form-group">
-        <label>Options</label>
-        {options.map((opt, idx) => (
-          <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <input
-              type="text"
-              value={opt}
-              onChange={e => handleOptionChange(idx, e.target.value)}
-              placeholder={`Option ${idx + 1}`}
-              style={{ flex: 1 }}
-            />
-            {options.length > 1 && (
-              <button type="button" onClick={() => removeOption(idx)} style={{ marginLeft: 8, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>Remove</button>
-            )}
-          </div>
-        ))}
-        <button type="button" onClick={addOption} style={{ marginTop: 8, background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.4rem 1.2rem', cursor: 'pointer' }}>Add Option</button>
-      </div>
-      <button type="button" onClick={handleAddQuestion} style={{ background: '#18c018', color: '#fff', border: 'none', borderRadius: 4, padding: '0.6rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer', marginTop: 12 }}>Add Question</button>
-      {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
-      <div style={{ marginTop: 32 }}>
-        <h3>Questions Added</h3>
-        {questions.length === 0 && <div style={{ color: '#888' }}>No questions added yet.</div>}
-        {questions.map((q, idx) => (
-          <div key={idx} style={{ background: '#f7f9fa', borderRadius: 6, padding: 12, marginBottom: 10, position: 'relative' }}>
-            <div style={{ fontWeight: 500 }}>{idx + 1}. {q.text}</div>
-            <ul style={{ margin: '8px 0 0 18px' }}>
-              {q.options.map((opt, i) => <li key={i}>{opt}</li>)}
-            </ul>
-            <button type="button" onClick={() => handleRemoveQuestion(idx)} style={{ position: 'absolute', top: 10, right: 10, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>Remove</button>
-          </div>
-        ))}
-      </div>
+
+      {questions.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h3 style={{ marginBottom: 16 }}>Current Questions</h3>
+          {questions.map((q, qIdx) => (
+            <div key={qIdx} style={{ marginBottom: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
+              <h4 style={{ marginBottom: 8 }}>{q.text}</h4>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {q.options.map((opt, oIdx) => (
+                  <li key={oIdx}>{opt}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+        <button type="button" onClick={onCancel} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
         <button type="button" onClick={onBack} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Back</button>
-        <button type="button" onClick={handleNext} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Next</button>
-        <button type="button" onClick={onCancel} style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
+        <button type="button" onClick={onNext} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Next</button>
       </div>
     </div>
   );
 }
 
 function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [voters, setVoters] = useState(data.voters || []);
-  const [error, setError] = useState('');
+  const [newVoter, setNewVoter] = useState('');
 
-  const handleAddVoter = () => {
-    if (!name.trim() || !email.trim()) {
-      setError('Both name and email are required.');
+  const handleAddVoter = (e) => {
+    e.preventDefault();
+    if (!newVoter.trim()) return;
+
+    const email = newVoter.trim().toLowerCase();
+    if (voters.some(v => v.email === email)) {
+      alert('This voter is already added.');
       return;
     }
-    // Simple email validation
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-    setVoters(vs => [...vs, { name: name.trim(), email: email.trim() }]);
-    setName('');
-    setEmail('');
-    setError('');
+
+    const updated = [...voters, { email, name: email.split('@')[0] }];
+    setVoters(updated);
+    setNewVoter('');
+    setData(prev => ({ ...prev, voters: updated }));
   };
 
-  const handleRemoveVoter = (idx) => {
-    setVoters(vs => vs.filter((_, i) => i !== idx));
-  };
-
-  const handleNext = () => {
-    if (voters.length === 0) {
-      setError('Please add at least one voter.');
-      return;
-    }
-    setData(prev => ({ ...prev, voters }));
-    onNext();
+  const handleRemoveVoter = (email) => {
+    const updated = voters.filter(v => v.email !== email);
+    setVoters(updated);
+    setData(prev => ({ ...prev, voters: updated }));
   };
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Add Voters</h2>
-      <div className="form-row">
-        <div className="form-group" style={{ flex: 2 }}>
-          <label>Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Voter Name"
-          />
-        </div>
-        <div className="form-group" style={{ flex: 3 }}>
-          <label>Email</label>
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ marginBottom: 16 }}>Add Voters</h3>
+        <form onSubmit={handleAddVoter} style={{ display: 'flex', gap: 8 }}>
           <input
             type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="Voter Email"
+            value={newVoter}
+            onChange={e => setNewVoter(e.target.value)}
+            placeholder="Enter voter's email"
+            style={{ flex: 1, padding: '0.7rem', borderRadius: 4, border: '1px solid #ddd' }}
           />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', marginLeft: 8 }}>
-          <button type="button" onClick={handleAddVoter} style={{ background: '#18c018', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Add Voter</button>
-        </div>
+          <button
+            type="submit"
+            style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', cursor: 'pointer' }}
+          >
+            Add Voter
+          </button>
+        </form>
       </div>
-      {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
-      <div style={{ marginTop: 32 }}>
-        <h3>Voters Added</h3>
-        {voters.length === 0 && <div style={{ color: '#888' }}>No voters added yet.</div>}
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {voters.map((v, idx) => (
-            <li key={idx} style={{ background: '#f7f9fa', borderRadius: 6, padding: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{v.name} &lt;{v.email}&gt;</span>
-              <button type="button" onClick={() => handleRemoveVoter(idx)} style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>Remove</button>
-            </li>
-          ))}
-        </ul>
-      </div>
+
+      {voters.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h3 style={{ marginBottom: 16 }}>Current Voters</h3>
+          <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16 }}>
+            {voters.map((voter, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: idx < voters.length - 1 ? '1px solid #ddd' : 'none' }}>
+                <span>{voter.email}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveVoter(voter.email)}
+                  style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.5rem 1rem', cursor: 'pointer' }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+        <button type="button" onClick={onCancel} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
         <button type="button" onClick={onBack} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Back</button>
-        <button type="button" onClick={handleNext} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Next</button>
-        <button type="button" onClick={onCancel} style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
+        <button type="button" onClick={onNext} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Next</button>
       </div>
     </div>
   );
@@ -312,39 +307,45 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
 function ReviewSave({ onSave, onBack, onCancel, data }) {
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Review & Save</h2>
-      <div style={{ background: '#f7f9fa', borderRadius: 6, padding: 18, marginBottom: 24 }}>
-        <h3>Basic Info</h3>
-        <div><b>Title:</b> {data.title}</div>
-        <div><b>Start Date:</b> {data.startDate ? new Date(data.startDate).toLocaleString() : ''}</div>
-        <div><b>End Date:</b> {data.endDate ? new Date(data.endDate).toLocaleString() : ''}</div>
-        <div><b>Timezone:</b> {data.timezone}</div>
-      </div>
-      <div style={{ background: '#f7f9fa', borderRadius: 6, padding: 18, marginBottom: 24 }}>
-        <h3>Ballot Questions</h3>
-        {(!data.questions || data.questions.length === 0) && <div style={{ color: '#888' }}>No questions added.</div>}
-        {data.questions && data.questions.map((q, idx) => (
-          <div key={idx} style={{ marginBottom: 12 }}>
-            <div style={{ fontWeight: 500 }}>{idx + 1}. {q.text}</div>
-            <ul style={{ margin: '8px 0 0 18px' }}>
-              {q.options.map((opt, i) => <li key={i}>{opt}</li>)}
-            </ul>
-          </div>
-        ))}
-      </div>
-      <div style={{ background: '#f7f9fa', borderRadius: 6, padding: 18, marginBottom: 24 }}>
-        <h3>Voters</h3>
-        {(!data.voters || data.voters.length === 0) && <div style={{ color: '#888' }}>No voters added.</div>}
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {data.voters && data.voters.map((v, idx) => (
-            <li key={idx} style={{ marginBottom: 6 }}>{v.name} &lt;{v.email}&gt;</li>
+      <h3 style={{ marginBottom: 24 }}>Review Election Details</h3>
+      
+      <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 24 }}>
+        <div style={{ marginBottom: 24 }}>
+          <h4 style={{ marginBottom: 8 }}>Basic Information</h4>
+          <p><strong>Title:</strong> {data.title}</p>
+          <p><strong>Start Date:</strong> {new Date(data.startDate).toLocaleString()}</p>
+          <p><strong>End Date:</strong> {new Date(data.endDate).toLocaleString()}</p>
+          <p><strong>Timezone:</strong> {data.timezone}</p>
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <h4 style={{ marginBottom: 8 }}>Questions</h4>
+          {data.questions?.map((q, idx) => (
+            <div key={idx} style={{ marginBottom: 16 }}>
+              <p><strong>Question {idx + 1}:</strong> {q.text}</p>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {q.options.map((opt, oIdx) => (
+                  <li key={oIdx}>{opt}</li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
+
+        <div>
+          <h4 style={{ marginBottom: 8 }}>Voters</h4>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {data.voters?.map((voter, idx) => (
+              <li key={idx}>{voter.email}</li>
+            ))}
+          </ul>
+        </div>
       </div>
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
+        <button type="button" onClick={onCancel} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
         <button type="button" onClick={onBack} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Back</button>
         <button type="button" onClick={onSave} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Save Election</button>
-        <button type="button" onClick={onCancel} style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
       </div>
     </div>
   );
@@ -353,26 +354,51 @@ function ReviewSave({ onSave, onBack, onCancel, data }) {
 const CreateElectionWizard = () => {
   const [step, setStep] = useState(0);
   const [wizardData, setWizardData] = useState({});
+  const navigate = useNavigate();
 
   const handleCancel = () => {
-    window.location.href = '/dashboard';
+    navigate('/dashboard');
   };
+
   const handleNext = () => setStep(s => s + 1);
   const handleBack = () => setStep(s => s - 1);
+
   const handleSave = () => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    // Determine election status based on dates
+    const now = new Date();
+    const startDate = new Date(wizardData.startDate);
+    const endDate = new Date(wizardData.endDate);
+    
+    let status = 'Building';
+    if (now >= startDate && now <= endDate) {
+      status = 'Live';
+    } else if (now > endDate) {
+      status = 'Ended';
+    } else if (now < startDate) {
+      status = 'Upcoming';
+    }
+
     // Save election to localStorage
     const elections = JSON.parse(localStorage.getItem('elections') || '[]');
     const newElection = {
       ...wizardData,
       id: Date.now(),
-      status: 'Building',
+      status: status,
+      createdBy: currentUser.email,
+      createdAt: new Date().toISOString(),
       totalVoters: wizardData.voters ? wizardData.voters.length : 0,
       totalVotes: 0,
-      description: '', // Placeholder if needed
+      description: wizardData.description || '',
     };
     elections.push(newElection);
     localStorage.setItem('elections', JSON.stringify(elections));
-    window.location.href = '/dashboard';
+    navigate('/dashboard');
   };
 
   return (

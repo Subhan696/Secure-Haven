@@ -19,6 +19,10 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Reviews from './pages/Reviews';
+import UserGuide from './pages/UserGuide';
 
 // Election Management Pages
 import Dashboard from './pages/Dashboard';
@@ -37,6 +41,7 @@ import ElectionLaunch from './pages/ElectionLaunch';
 import AccountSettings from './pages/AccountSettings';
 import VoterDashboard from './pages/VoterDashboard';
 import VoterElection from './pages/VoterElection';
+import VoterProfile from './pages/VoterProfile';
 
 import './App.css';
 
@@ -71,7 +76,11 @@ const router = createBrowserRouter([
       { path: '/about', element: <About /> },
       { path: '/contact', element: <Contact /> },
       { path: '/login', element: <Login /> },
-      { path: '/signup', element: <Signup /> }
+      { path: '/signup', element: <Signup /> },
+      { path: '/forgot-password', element: <ForgotPassword /> },
+      { path: '/reset-password', element: <ResetPassword /> },
+      { path: '/reviews', element: <Reviews /> },
+      { path: '/user-guide', element: <UserGuide /> }
     ]
   },
   {
@@ -113,6 +122,10 @@ const router = createBrowserRouter([
   {
     path: '/voter-election/:electionId',
     element: <VoterElection />
+  },
+  {
+    path: '/voter-profile',
+    element: <VoterProfile />
   }
 ]);
 

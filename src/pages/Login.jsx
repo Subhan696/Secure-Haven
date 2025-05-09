@@ -96,17 +96,22 @@ const Login = () => {
             />
           </div>
           {loginType === 'admin' ? (
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
+            <>
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="forgot-password-link">
+                <a href="/forgot-password">Forgot Password?</a>
+              </div>
+            </>
           ) : (
             <div className="form-group">
               <label htmlFor="voterKey">Voter Key</label>
