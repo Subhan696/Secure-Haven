@@ -19,31 +19,51 @@ const ElectionOverview = () => {
     if (stored) {
       const found = JSON.parse(stored).find(e => String(e.id) === String(id));
       if (found) {
-        // Update election status based on dates
+        // Update election status based on dates and launched status
         const now = new Date();
         const startDate = new Date(found.startDate);
         const endDate = new Date(found.endDate);
         
         let status = found.status;
-        if (found.status === 'Building') {
-          if (now < startDate) {
-            status = 'Upcoming';
-          } else if (now >= startDate && now <= endDate) {
-            status = 'Live';
-          } else if (now > endDate) {
+        
+        // Only update status if the election has been launched
+        if (found.launched) {
+          if (now > endDate) {
+            // If end date has passed, mark as Ended
             status = 'Ended';
+          } else if (now >= startDate && now <= endDate) {
+            // If current time is between start and end dates, mark as Live
+            status = 'Live';
+          } else if (now < startDate) {
+            // If start date is in the future, mark as Upcoming
+            status = 'Upcoming';
           }
-          
-          // Update status in localStorage if it changed
-          if (status !== found.status) {
+        } else {
+          // If not launched yet, check if it should be deleted
+          if (now > endDate) {
+            // If end date has passed and election wasn't launched, it should be deleted
             const elections = JSON.parse(stored);
-            const updatedElections = elections.map(e => 
-              String(e.id) === String(id) ? { ...e, status } : e
-            );
-            localStorage.setItem('elections', JSON.stringify(updatedElections));
-            found.status = status;
+            const filteredElections = elections.filter(e => String(e.id) !== String(id));
+            localStorage.setItem('elections', JSON.stringify(filteredElections));
+            // Set election to null and return early
+            setElection(null);
+            return;
+          } else {
+            // If not launched and end date hasn't passed, keep as Draft
+            status = 'Draft';
           }
         }
+        
+        // Update status in localStorage if it changed
+        if (status !== found.status) {
+          const elections = JSON.parse(stored);
+          const updatedElections = elections.map(e => 
+            String(e.id) === String(id) ? { ...e, status } : e
+          );
+          localStorage.setItem('elections', JSON.stringify(updatedElections));
+          found.status = status;
+        }
+        
         setElection(found);
       }
     }
@@ -87,7 +107,7 @@ const ElectionOverview = () => {
         <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
           &#9776;
         </button>
-        <h2 className="overview-title">Overview</h2>
+        <h2 className="overview-title">{election.title || 'Election'} - Overview</h2>
         <div className="overview-content">
           <div className="overview-main">
             <div className="overview-row">

@@ -20,17 +20,52 @@ const ElectionLaunch = () => {
 
   const handleLaunch = () => {
     setIsLaunching(true);
+    const now = new Date();
     const stored = localStorage.getItem('elections');
+    
     if (stored) {
       const elections = JSON.parse(stored);
-      const updatedElections = elections.map(e => 
-        String(e.id) === String(id) 
-          ? { ...e, status: 'live', launchDate: new Date().toISOString() }
-          : e
-      );
-      localStorage.setItem('elections', JSON.stringify(updatedElections));
-      setElection(prev => ({ ...prev, status: 'live', launchDate: new Date().toISOString() }));
+      const currentElection = elections.find(e => String(e.id) === String(id));
+      
+      if (currentElection) {
+        const startDate = new Date(currentElection.startDate);
+        const endDate = new Date(currentElection.endDate);
+        
+        let newStatus = 'Draft';
+        
+        // Determine the correct status based on current time and election dates
+        if (now > endDate) {
+          // If end date has already passed, mark as Ended
+          newStatus = 'Ended';
+        } else if (now >= startDate && now <= endDate) {
+          // If current time is between start and end dates, mark as Live
+          newStatus = 'Live';
+        } else if (now < startDate) {
+          // If start date is in the future, mark as Upcoming
+          newStatus = 'Upcoming';
+        }
+        
+        const updatedElections = elections.map(e => 
+          String(e.id) === String(id) 
+            ? { 
+                ...e, 
+                status: newStatus, 
+                launchDate: new Date().toISOString(),
+                launched: true // Flag to indicate this election has been launched
+              }
+            : e
+        );
+        
+        localStorage.setItem('elections', JSON.stringify(updatedElections));
+        setElection(prev => ({ 
+          ...prev, 
+          status: newStatus, 
+          launchDate: new Date().toISOString(),
+          launched: true
+        }));
+      }
     }
+    
     setIsLaunching(false);
     navigate('/dashboard');
   };
@@ -50,8 +85,8 @@ const ElectionLaunch = () => {
         <div className="launch-container">
           <div className="launch-header">
             <h1 className="launch-title">Launch Election</h1>
-            <div className={`launch-status ${election.status === 'live' ? 'live' : 'draft'}`}>
-              {election.status === 'live' ? 'Live' : 'Draft'}
+            <div className={`launch-status ${election.status === 'Live' ? 'live' : 'draft'}`}>
+              {election.status === 'Live' ? 'Live' : 'Draft'}
             </div>
           </div>
 
@@ -108,7 +143,7 @@ const ElectionLaunch = () => {
           </div>
 
           <div className="launch-actions">
-            {election.status !== 'live' ? (
+            {election.status !== 'Live' ? (
               <button 
                 className="launch-btn"
                 onClick={handleLaunch}

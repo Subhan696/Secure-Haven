@@ -21,10 +21,58 @@ const Dashboard = () => {
     // Read elections from localStorage
     const stored = localStorage.getItem('elections');
     if (stored) {
+      const now = new Date();
+      let allElections = JSON.parse(stored);
+      let updatedElections = false;
+      
+      // Update election statuses based on current date
+      allElections = allElections.map(election => {
+        const startDate = new Date(election.startDate);
+        const endDate = new Date(election.endDate);
+        let status = election.status;
+        
+        // Update status based on dates if the election has been launched
+        if (election.launched) {
+          if (now > endDate && status !== 'Ended') {
+            status = 'Ended';
+            updatedElections = true;
+          } else if (now >= startDate && now <= endDate && status !== 'Live') {
+            status = 'Live';
+            updatedElections = true;
+          } else if (now < startDate && status !== 'Upcoming') {
+            status = 'Upcoming';
+            updatedElections = true;
+          }
+        } else {
+          // If not launched and end date has passed, it should be deleted
+          // We'll handle this in the filter below
+        }
+        
+        return { ...election, status };
+      });
+      
+      // Filter out elections that weren't launched and have ended
+      const validElections = allElections.filter(election => {
+        if (!election.launched) {
+          const endDate = new Date(election.endDate);
+          if (now > endDate) {
+            updatedElections = true;
+            return false; // Remove this election
+          }
+        }
+        return true;
+      });
+      
+      // Save updated elections back to localStorage if any changes were made
+      if (updatedElections) {
+        localStorage.setItem('elections', JSON.stringify(validElections));
+      }
+      
       // Only show elections created by the current admin
-      const userElections = JSON.parse(stored).filter(election => 
+      const userElections = validElections.filter(election => 
         election.createdBy === currentUser.email
       );
+      
       setElections(userElections);
     } else {
       setElections([]);

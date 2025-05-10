@@ -5,6 +5,11 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.preview-container:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
 .preview-header {
@@ -34,6 +39,22 @@
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;
+}
+
+.election-description {
+  background: #fff;
+  padding: 1.2rem;
+  border-radius: 6px;
+  margin-bottom: 1.2rem;
+  border-left: 4px solid #4CAF50;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.election-description p {
+  margin: 0;
+  color: #333;
+  line-height: 1.5;
+  font-size: 1rem;
 }
 
 .preview-instructions h2 {
@@ -73,6 +94,12 @@
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.preview-question:hover {
+  border-color: #4CAF50;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
 }
 
 .question-number {
@@ -157,11 +184,14 @@
   border-radius: 6px;
   font-size: 1.1rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .preview-submit-btn:hover:not(:disabled) {
   background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .preview-submit-btn:disabled {
@@ -186,21 +216,120 @@
   color: #333;
 }
 
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .preview-container {
+    max-width: 90%;
+  }
+}
+
 @media (max-width: 768px) {
   .preview-container {
-    padding: 1rem;
+    padding: 1.5rem;
+    max-width: 95%;
+  }
+
+  .preview-header {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .preview-title {
+    font-size: 1.7rem;
+  }
+
+  .preview-instructions {
+    padding: 1.2rem;
+  }
+
+  .preview-question {
+    padding: 1.2rem;
+  }
+
+  .option-item {
+    padding: 0.8rem;
+  }
+
+  .preview-actions {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .preview-submit-btn,
+  .preview-clear-btn {
+    width: 100%;
+    padding: 0.9rem 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .preview-container {
+    padding: 1.2rem;
+    border-radius: 8px;
+  }
+
+  .preview-header {
+    padding-bottom: 1.2rem;
+    margin-bottom: 1.2rem;
   }
 
   .preview-title {
     font-size: 1.5rem;
   }
 
-  .preview-actions {
-    flex-direction: column;
+  .preview-info {
+    font-size: 0.9rem;
+  }
+
+  .preview-instructions h2,
+  .question-number {
+    font-size: 1.1rem;
+  }
+
+  .preview-instructions {
+    padding: 1rem;
+  }
+
+  .preview-instructions li {
+    font-size: 0.9rem;
+  }
+
+  .preview-question {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .question-text {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .options-container {
+    gap: 0.7rem;
+  }
+
+  .option-item {
+    padding: 0.7rem;
+  }
+
+  .option-radio {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.8rem;
+  }
+
+  .radio-inner {
+    width: 10px;
+    height: 10px;
+  }
+
+  .option-text {
+    font-size: 0.9rem;
   }
 
   .preview-submit-btn,
   .preview-clear-btn {
-    width: 100%;
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
   }
-} 
+}

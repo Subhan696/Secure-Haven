@@ -97,6 +97,9 @@ const ElectionSettings = () => {
       );
       localStorage.setItem('elections', JSON.stringify(arr));
       setElection(arr.find(e => String(e.id) === String(id)));
+      
+      // Dispatch a custom event to notify other components that the election has been updated
+      window.dispatchEvent(new CustomEvent('electionUpdated', { detail: { id, fields } }));
     }
   }
 
@@ -150,7 +153,7 @@ const ElectionSettings = () => {
             {activeTab === 'dates' && (
               <>
                 <h3 className="settings-panel-title">Election Dates</h3>
-                <div className="form-row">
+                <div className="date-inputs-container">
                   <div className="form-group">
                     <label>Start Date</label>
                     <input

@@ -1,9 +1,92 @@
 .footer {
-    background-color: #20232a;
-    color: white;
-    text-align: center;
-    padding: 10px;
-    position:static;
-    bottom: 0;
+  background-color: #20232a;
+  color: white;
+  padding: 0;
+  position: static;
+  bottom: 0;
+  width: 100%;
+}
+
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.footer-section {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 1.5rem;
+  padding: 0 1rem;
+}
+
+.footer-section h3 {
+  color: #fff;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.footer-section h3:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 40px;
+  height: 2px;
+  background-color: #3498db;
+}
+
+.footer-description {
+  line-height: 1.6;
+  color: #ccc;
+  margin-bottom: 1rem;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-links li {
+  margin-bottom: 0.8rem;
+}
+
+.footer-links a {
+  color: #ccc;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.footer-bottom {
+  background-color: #1a1d22;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.footer-bottom p {
+  margin: 0;
+  color: #ccc;
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    padding: 1.5rem 1rem;
   }
   
+  .footer-section {
+    margin-bottom: 1.5rem;
+    padding: 0;
+  }
+}

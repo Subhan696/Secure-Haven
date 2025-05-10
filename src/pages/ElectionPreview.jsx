@@ -57,6 +57,11 @@ const ElectionPreview = () => {
 
           <div className="preview-instructions">
             <h2>Instructions</h2>
+            {election.description && (
+              <div className="election-description">
+                <p>{election.description}</p>
+              </div>
+            )}
             <ul>
               <li>Please review each question carefully before making your selection.</li>
               <li>You can only select one option per question.</li>

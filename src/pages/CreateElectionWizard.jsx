@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getVoterKey } from '../utils/voterKey';
+import './CreateElectionWizard.css';
 
 const steps = [
   'Basic Info',
@@ -17,20 +19,11 @@ const timezones = [
 
 function StepIndicator({ currentStep }) {
   return (
-    <div className="wizard-step-indicator" style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+    <div className="wizard-step-indicator">
       {steps.map((step, idx) => (
         <div
           key={step}
-          style={{
-            padding: '8px 18px',
-            borderRadius: 20,
-            background: idx === currentStep ? '#3498db' : '#e0e7ef',
-            color: idx === currentStep ? '#fff' : '#222',
-            fontWeight: idx === currentStep ? 600 : 400,
-            marginRight: idx < steps.length - 1 ? 12 : 0,
-            fontSize: 16,
-            transition: 'background 0.2s, color 0.2s',
-          }}
+          className={`wizard-step ${idx === currentStep ? 'active' : ''}`}
         >
           {idx + 1}. {step}
         </div>
@@ -73,18 +66,19 @@ function BasicInfoForm({ onNext, onCancel, data, setData }) {
   };
 
   return (
-    <form onSubmit={handleNext} style={{ maxWidth: 520, margin: '0 auto' }}>
+    <form onSubmit={handleNext} className="wizard-form">
       <div className="form-group">
         <label htmlFor="title">Title</label>
         <input
           type="text"
           id="title"
           name="title"
+          className="form-control"
           placeholder="e.g. Homecoming Court, Board of Directors"
           value={local.title}
           onChange={handleChange}
         />
-        {errors.title && <div style={{ color: 'red', fontSize: 14 }}>{errors.title}</div>}
+        {errors.title && <div className="form-error">{errors.title}</div>}
       </div>
       <div className="form-row">
         <div className="form-group">
@@ -93,10 +87,11 @@ function BasicInfoForm({ onNext, onCancel, data, setData }) {
             type="datetime-local"
             id="startDate"
             name="startDate"
+            className="form-control"
             value={local.startDate}
             onChange={handleChange}
           />
-          {errors.startDate && <div style={{ color: 'red', fontSize: 14 }}>{errors.startDate}</div>}
+          {errors.startDate && <div className="form-error">{errors.startDate}</div>}
         </div>
         <div className="form-group">
           <label htmlFor="endDate">End Date</label>
@@ -104,10 +99,11 @@ function BasicInfoForm({ onNext, onCancel, data, setData }) {
             type="datetime-local"
             id="endDate"
             name="endDate"
+            className="form-control"
             value={local.endDate}
             onChange={handleChange}
           />
-          {errors.endDate && <div style={{ color: 'red', fontSize: 14 }}>{errors.endDate}</div>}
+          {errors.endDate && <div className="form-error">{errors.endDate}</div>}
         </div>
       </div>
       <div className="form-group">
@@ -115,6 +111,7 @@ function BasicInfoForm({ onNext, onCancel, data, setData }) {
         <select
           id="timezone"
           name="timezone"
+          className="form-control"
           value={local.timezone}
           onChange={handleChange}
         >
@@ -122,11 +119,11 @@ function BasicInfoForm({ onNext, onCancel, data, setData }) {
             <option key={tz.value} value={tz.value}>{tz.label}</option>
           ))}
         </select>
-        {errors.timezone && <div style={{ color: 'red', fontSize: 14 }}>{errors.timezone}</div>}
+        {errors.timezone && <div className="form-error">{errors.timezone}</div>}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
-        <button type="button" onClick={onCancel} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
-        <button type="submit" style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Next</button>
+      <div className="wizard-actions">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
+        <button type="submit" className="btn btn-primary">Next</button>
       </div>
     </form>
   );
@@ -153,33 +150,33 @@ function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ marginBottom: 16 }}>Add Questions</h3>
+    <div className="wizard-form">
+      <div className="ballot-builder-section">
+        <h3>Add Questions</h3>
         <div className="form-group">
           <input
             type="text"
             value={newQuestion}
             onChange={e => setNewQuestion(e.target.value)}
             placeholder="Enter question"
-            style={{ width: '100%', padding: '0.7rem', borderRadius: 4, border: '1px solid #ddd' }}
+            className="form-control"
           />
         </div>
-        <div style={{ marginTop: 16 }}>
+        <div className="ballot-options">
           {newOptions.map((opt, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <div key={idx} className="ballot-option">
               <input
                 type="text"
                 value={opt}
                 onChange={e => handleOptionChange(idx, e.target.value)}
                 placeholder={`Option ${idx + 1}`}
-                style={{ flex: 1, padding: '0.7rem', borderRadius: 4, border: '1px solid #ddd' }}
+                className="form-control"
               />
               {newOptions.length > 1 && (
                 <button
                   type="button"
                   onClick={() => handleRemoveOption(idx)}
-                  style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1rem', cursor: 'pointer' }}
+                  className="btn btn-danger"
                 >
                   Remove
                 </button>
@@ -189,27 +186,29 @@ function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
           <button
             type="button"
             onClick={handleAddOption}
-            style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', marginTop: 8, cursor: 'pointer' }}
+            className="add-option-btn"
           >
-            Add Option
+            <span>+</span> Add Option
           </button>
         </div>
         <button
           type="button"
           onClick={handleAddQuestion}
-          style={{ background: '#2ecc71', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', marginTop: 16, cursor: 'pointer' }}
+          className="btn btn-primary"
         >
           Add Question
         </button>
       </div>
 
       {questions.length > 0 && (
-        <div style={{ marginTop: 32 }}>
-          <h3 style={{ marginBottom: 16 }}>Current Questions</h3>
+        <div className="ballot-items">
+          <h3>Current Questions</h3>
           {questions.map((q, qIdx) => (
-            <div key={qIdx} style={{ marginBottom: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 }}>
-              <h4 style={{ marginBottom: 8 }}>{q.text}</h4>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
+            <div key={qIdx} className="ballot-item">
+              <div className="ballot-item-header">
+                <h4 className="ballot-item-title">{q.text}</h4>
+              </div>
+              <ul className="ballot-item-options">
                 {q.options.map((opt, oIdx) => (
                   <li key={oIdx}>{opt}</li>
                 ))}
@@ -219,10 +218,10 @@ function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
-        <button type="button" onClick={onCancel} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
-        <button type="button" onClick={onBack} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Back</button>
-        <button type="button" onClick={onNext} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Next</button>
+      <div className="wizard-actions">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
+        <button type="button" onClick={onBack} className="btn btn-secondary">Back</button>
+        <button type="button" onClick={onNext} className="btn btn-primary">Next</button>
       </div>
     </div>
   );
@@ -242,7 +241,10 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
       return;
     }
 
-    const updated = [...voters, { email, name: email.split('@')[0] }];
+    // Generate or get existing voter key
+    const voterKey = getVoterKey(email);
+    
+    const updated = [...voters, { email, name: email.split('@')[0], key: voterKey }];
     setVoters(updated);
     setNewVoter('');
     setData(prev => ({ ...prev, voters: updated }));
@@ -255,20 +257,20 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ marginBottom: 16 }}>Add Voters</h3>
-        <form onSubmit={handleAddVoter} style={{ display: 'flex', gap: 8 }}>
+    <div className="wizard-form">
+      <div className="add-voter-section">
+        <h3>Add Voters</h3>
+        <form onSubmit={handleAddVoter} className="form-group">
           <input
             type="email"
             value={newVoter}
             onChange={e => setNewVoter(e.target.value)}
             placeholder="Enter voter's email"
-            style={{ flex: 1, padding: '0.7rem', borderRadius: 4, border: '1px solid #ddd' }}
+            className="form-control"
           />
           <button
             type="submit"
-            style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', cursor: 'pointer' }}
+            className="btn btn-primary"
           >
             Add Voter
           </button>
@@ -276,29 +278,33 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
       </div>
 
       {voters.length > 0 && (
-        <div style={{ marginTop: 32 }}>
-          <h3 style={{ marginBottom: 16 }}>Current Voters</h3>
-          <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16 }}>
+        <div className="voters-list">
+          <h3>Current Voters</h3>
+          <div className="voters-grid">
             {voters.map((voter, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: idx < voters.length - 1 ? '1px solid #ddd' : 'none' }}>
-                <span>{voter.email}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveVoter(voter.email)}
-                  style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, padding: '0.5rem 1rem', cursor: 'pointer' }}
-                >
-                  Remove
-                </button>
+              <div key={idx} className="voter-card">
+                <div className="voter-info">
+                  <div className="voter-email">{voter.email}</div>
+                </div>
+                <div className="voter-actions">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveVoter(voter.email)}
+                    className="remove-voter"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
-        <button type="button" onClick={onCancel} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
-        <button type="button" onClick={onBack} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Back</button>
-        <button type="button" onClick={onNext} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Next</button>
+      <div className="wizard-actions">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>
+        <button type="button" onClick={onBack} className="btn btn-secondary">Back</button>
+        <button type="button" onClick={onNext} className="btn btn-primary">Next</button>
       </div>
     </div>
   );
@@ -370,19 +376,9 @@ const CreateElectionWizard = () => {
       return;
     }
 
-    // Determine election status based on dates
-    const now = new Date();
-    const startDate = new Date(wizardData.startDate);
-    const endDate = new Date(wizardData.endDate);
-    
-    let status = 'Building';
-    if (now >= startDate && now <= endDate) {
-      status = 'Live';
-    } else if (now > endDate) {
-      status = 'Ended';
-    } else if (now < startDate) {
-      status = 'Upcoming';
-    }
+    // Set election status to Draft by default
+    // Elections will only become Live when manually launched from the ElectionLaunch page
+    const status = 'Draft';
 
     // Save election to localStorage
     const elections = JSON.parse(localStorage.getItem('elections') || '[]');

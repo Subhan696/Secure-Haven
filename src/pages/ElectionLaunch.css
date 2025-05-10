@@ -5,6 +5,11 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.launch-container:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
 .launch-header {
@@ -61,6 +66,13 @@
   background: #f8f9fa;
   padding: 1rem;
   border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.info-item:hover {
+  background: #f5f5f5;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
 }
 
 .info-item label {
@@ -143,12 +155,15 @@
   border-radius: 6px;
   font-size: 1.1rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.3s ease;
   min-width: 200px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .launch-btn:hover:not(:disabled) {
   background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .launch-btn:disabled {
@@ -171,20 +186,85 @@
   font-size: 1.2rem;
 }
 
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .launch-container {
+    max-width: 90%;
+  }
+}
+
 @media (max-width: 768px) {
   .launch-container {
-    padding: 1rem;
+    padding: 1.5rem;
+    max-width: 95%;
+  }
+
+  .launch-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .launch-title {
+    font-size: 1.7rem;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .launch-checklist {
+    padding: 1.2rem;
+  }
+
+  .launch-btn {
+    width: 100%;
+    padding: 0.9rem 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .launch-container {
+    padding: 1.2rem;
+    border-radius: 8px;
   }
 
   .launch-title {
     font-size: 1.5rem;
   }
 
-  .info-grid {
-    grid-template-columns: 1fr;
+  .launch-status {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .launch-info-section h2, 
+  .launch-checklist h2 {
+    font-size: 1.3rem;
+  }
+
+  .info-item {
+    padding: 0.8rem;
+  }
+
+  .info-item p {
+    font-size: 1rem;
+  }
+
+  .launch-checklist li {
+    padding: 0.6rem 0;
+    font-size: 0.9rem;
+  }
+
+  .check-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 0.8rem;
   }
 
   .launch-btn {
-    width: 100%;
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
   }
 } 

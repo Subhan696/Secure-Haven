@@ -1,23 +1,20 @@
 .voter-dashboard-container {
   min-height: 100vh;
   background: #f8f9fa;
-  padding: 2rem;
   animation: fadeIn 0.5s ease-in-out;
-}
-
-.voter-dashboard-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  flex-direction: column;
 }
 
-.voter-dashboard-header h1 {
+.voter-dashboard-content {
+  padding: 2rem;
+  flex: 1;
+}
+
+.voter-dashboard-content h2 {
   color: #2c3e50;
-  font-size: 2.2rem;
-  margin: 0;
+  font-size: 1.8rem;
+  margin: 0 0 1.5rem 0;
   font-weight: 600;
 }
 
@@ -81,6 +78,7 @@
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
   animation: slideUp 0.5s ease-out;
+  margin-top: 2rem;
 }
 
 .election-card {
@@ -145,6 +143,8 @@
 .election-card-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .vote-btn {
@@ -156,11 +156,25 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(52, 152, 219, 0.1);
 }
 
 .vote-btn:hover {
   background: #2980b9;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(52, 152, 219, 0.2);
+}
+
+.vote-btn.voted {
+  background: #27ae60;
+  cursor: default;
+  box-shadow: 0 4px 6px rgba(39, 174, 96, 0.1);
+}
+
+.vote-btn.voted:hover {
+  background: #219653;
+  transform: none;
+  box-shadow: 0 4px 6px rgba(39, 174, 96, 0.1);
 }
 
 .no-elections {
@@ -213,7 +227,7 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .voter-dashboard-container {
+  .voter-dashboard-content {
     padding: 1.5rem;
   }
 
@@ -231,6 +245,7 @@
   .voter-actions {
     flex-direction: column;
     width: 100%;
+    gap: 1rem;
   }
 
   .search-box {
@@ -244,15 +259,25 @@
 
   .voter-dashboard-list {
     grid-template-columns: 1fr;
+    margin-top: 1.5rem;
   }
 
   .election-card {
     padding: 1.2rem;
   }
+
+  .election-card-actions {
+    justify-content: center;
+  }
+
+  .vote-btn {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 @media (max-width: 480px) {
-  .voter-dashboard-container {
+  .voter-dashboard-content {
     padding: 1rem;
   }
 
@@ -267,5 +292,18 @@
 
   .election-status {
     align-self: flex-start;
+  }
+
+  .election-card-details p {
+    font-size: 0.9rem;
+  }
+
+  .search-box::before {
+    font-size: 0.8rem;
+  }
+
+  .search-box input {
+    font-size: 0.9rem;
+    padding: 0.7rem 1rem 0.7rem 2.3rem;
   }
 } 

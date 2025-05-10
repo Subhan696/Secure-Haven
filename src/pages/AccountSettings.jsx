@@ -86,9 +86,50 @@ const AccountSettings = () => {
       return;
     }
 
+    // Verify current password
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    
+    if (!currentUser) {
+      setMessage({
+        type: 'error',
+        text: 'User session not found. Please log in again.'
+      });
+      setLoading(false);
+      return;
+    }
+    
+    const userIndex = users.findIndex(u => u.email === currentUser.email);
+    
+    if (userIndex === -1) {
+      setMessage({
+        type: 'error',
+        text: 'User not found in the system.'
+      });
+      setLoading(false);
+      return;
+    }
+    
+    // Check if current password is correct
+    if (users[userIndex].password !== password.current) {
+      setMessage({
+        type: 'error',
+        text: 'Current password is incorrect.'
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update password in users array
+      users[userIndex].password = password.new;
+      
+      // Update currentUser object with new password
+      currentUser.password = password.new;
+      
+      // Save updated users array and currentUser to localStorage
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
       
       setMessage({
         type: 'success',

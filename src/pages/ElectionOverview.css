@@ -2,6 +2,7 @@
   padding: 2rem 1rem;
   max-width: 1200px;
   margin: 0 auto;
+  transition: padding 0.3s ease;
 }
 
 .overview-title {
@@ -15,6 +16,7 @@
   display: flex;
   gap: 2rem;
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .overview-main {
@@ -25,6 +27,7 @@
   display: flex;
   gap: 2rem;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
 }
 
 .overview-card {
@@ -37,6 +40,12 @@
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  transition: all 0.3s ease;
+}
+
+.overview-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(44,62,80,0.1);
 }
 
 .overview-card-label {
@@ -111,6 +120,13 @@
   background: #f8f9fa;
   border-radius: 6px;
   padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.option-result:hover {
+  background: #f1f3f5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 .option-header {
@@ -244,6 +260,28 @@
   margin-left: auto;
 }
 
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .overview-main {
+    width: 100%;
+  }
+
+  .overview-card {
+    padding: 1.3rem 1.8rem;
+  }
+
+  .overview-side {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .overview-summary-card {
+    flex: 1;
+    min-width: 160px;
+  }
+}
+
 @media (max-width: 900px) {
   .overview-content {
     flex-direction: column;
@@ -268,5 +306,121 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 0.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .overview-layout {
+    padding: 1.5rem 1rem;
+  }
+
+  .overview-title {
+    font-size: 1.8rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .results-section {
+    padding: 1.2rem;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .question-title {
+    font-size: 1rem;
+  }
+
+  .option-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .voter-details-section {
+    padding: 1.2rem;
+  }
+
+  .overview-summary-card {
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .overview-summary-count {
+    font-size: 1.6rem;
+  }
+
+  .overview-summary-icon {
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-layout {
+    padding: 1rem;
+  }
+
+  .overview-title {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .overview-card {
+    padding: 1rem 1.2rem;
+  }
+
+  .overview-card-label {
+    font-size: 1rem;
+  }
+
+  .overview-card-value {
+    font-size: 1.05rem;
+  }
+
+  .results-section {
+    padding: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+  }
+
+  .option-result {
+    padding: 0.8rem;
+  }
+
+  .vote-count {
+    font-size: 0.8rem;
+  }
+
+  .participation-text {
+    font-size: 0.8rem;
+  }
+
+  .overview-side {
+    flex-direction: column;
+  }
+
+  .overview-summary-card {
+    width: 100%;
+  }
+
+  .voter-card {
+    padding: 0.8rem;
+  }
+
+  .voter-name {
+    font-size: 0.95rem;
+  }
+
+  .voter-email {
+    font-size: 0.85rem;
+  }
+
+  .vote-detail {
+    font-size: 0.85rem;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 } 

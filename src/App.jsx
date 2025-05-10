@@ -12,6 +12,7 @@ import Footer from './components/Footer'; // Public footer
 import DashboardHeader from './components/DashboardHeader'; // Dashboard header
 import DashboardFooter from './components/DashboardFooter'; // Dashboard footer
 import PrivateRoute from './components/PrivateRoute';
+import ErrorBoundary from './components/ErrorBoundary'; // Error boundary component
 
 // Public Pages
 import Home from './pages/Home';
@@ -23,6 +24,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Reviews from './pages/Reviews';
 import UserGuide from './pages/UserGuide';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Election Management Pages
 import Dashboard from './pages/Dashboard';
@@ -45,9 +47,13 @@ import VoterProfile from './pages/VoterProfile';
 
 import './App.css';
 
+// Import the standalone ScrollToTop component
+import ScrollToTop from './components/ScrollToTop';
+
 // Layout for public pages (includes header/footer)
 const PublicLayout = () => (
   <div className="App">
+    <ScrollToTop />
     <Header />
     <main>
       <Outlet />
@@ -59,6 +65,7 @@ const PublicLayout = () => (
 // Layout for dashboard pages (custom header/footer)
 const DashboardLayout = () => (
   <div className="App dashboard-app">
+    <ScrollToTop />
     <DashboardHeader />
     <main>
       <Outlet />
@@ -67,25 +74,38 @@ const DashboardLayout = () => (
   </div>
 );
 
+// Wrap components with ScrollToTop for individual routes
+const withScrollReset = (Component) => {
+  return (
+    <>
+      <ScrollToTop />
+      <Component />
+    </>
+  );
+};
+
 const router = createBrowserRouter([
   {
     path: '/',
     element: <PublicLayout />,
+    errorElement: <ErrorBoundary />,
     children: [
       { path: '/', element: <Home /> },
-      { path: '/about', element: <About /> },
-      { path: '/contact', element: <Contact /> },
-      { path: '/login', element: <Login /> },
-      { path: '/signup', element: <Signup /> },
-      { path: '/forgot-password', element: <ForgotPassword /> },
-      { path: '/reset-password', element: <ResetPassword /> },
-      { path: '/reviews', element: <Reviews /> },
-      { path: '/user-guide', element: <UserGuide /> }
+      { path: '/about', element: withScrollReset(About) },
+      { path: '/contact', element: withScrollReset(Contact) },
+      { path: '/login', element: withScrollReset(Login) },
+      { path: '/signup', element: withScrollReset(Signup) },
+      { path: '/forgot-password', element: withScrollReset(ForgotPassword) },
+      { path: '/reset-password', element: withScrollReset(ResetPassword) },
+      { path: '/reviews', element: withScrollReset(Reviews) },
+      { path: '/user-guide', element: withScrollReset(UserGuide) },
+      { path: '/privacy-policy', element: withScrollReset(PrivacyPolicy) }
     ]
   },
   {
     path: '/dashboard',
     element: <PrivateRoute />,
+    errorElement: <ErrorBoundary />,
     children: [
       {
         path: '',
@@ -117,20 +137,31 @@ const router = createBrowserRouter([
   // Voter routes
   {
     path: '/voter-dashboard',
-    element: <VoterDashboard />
+    element: <VoterDashboard />,
+    errorElement: <ErrorBoundary />
   },
   {
     path: '/voter-election/:electionId',
-    element: <VoterElection />
+    element: <VoterElection />,
+    errorElement: <ErrorBoundary />
   },
   {
     path: '/voter-profile',
-    element: <VoterProfile />
+    element: <VoterProfile />,
+    errorElement: <ErrorBoundary />
   }
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider
+        router={router}
+        future={{ v7_startTransition: true }}
+        fallbackElement={<div>Loading...</div>}
+      />
+    </>
+  );
 }
 
 export default App;

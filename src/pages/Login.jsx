@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
@@ -11,6 +11,8 @@ const Login = () => {
     voterKey: ''
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,9 +22,48 @@ const Login = () => {
     }));
   };
 
+  // Effect for the loading progress bar
+  useEffect(() => {
+    let progressInterval;
+    
+    if (isLoading) {
+      progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return prev + 10; // Increment by 10% every interval
+        });
+      }, 100); // Update every 100ms to complete in 1 second
+    } else {
+      setLoadingProgress(0);
+    }
+    
+    return () => {
+      if (progressInterval) clearInterval(progressInterval);
+    };
+  }, [isLoading]);
+  
+  // Effect to navigate after loading completes
+  useEffect(() => {
+    if (loadingProgress === 100) {
+      const timer = setTimeout(() => {
+        if (isLoading) {
+          // This will only execute if we haven't already set isLoading to false
+          // which would happen if there was an error
+          setIsLoading(false);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loadingProgress, isLoading]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     if (loginType === 'admin') {
       // Admin login
@@ -31,42 +72,49 @@ const Login = () => {
 
       if (!user) {
         setError('Invalid email or password');
+        setIsLoading(false);
         return;
       }
 
       // Set current user
       localStorage.setItem('currentUser', JSON.stringify(user));
       localStorage.setItem('userEmail', user.email);
-      navigate('/dashboard');
+      
+      // Navigation will happen after progress bar completes
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
     } else {
       // Voter login
       const elections = JSON.parse(localStorage.getItem('elections') || '[]');
-      const voterElection = elections.find(election => 
+      const election = elections.find(election => 
         election.voters.some(voter => 
           voter.email === formData.email && voter.key === formData.voterKey
         )
       );
 
-      if (!voterElection) {
-        setError('Invalid email or voter key');
+      if (!election || !election.voters.find(voter => voter.email === formData.email && voter.key === formData.voterKey)) {
+        setError('Invalid voter credentials');
+        setIsLoading(false);
         return;
       }
 
       // Set voter session
-      const voter = voterElection.voters.find(v => v.email === formData.email);
-      localStorage.setItem('currentUser', JSON.stringify({
-        email: voter.email,
-        role: 'voter',
-        electionId: voterElection.id
-      }));
+      const voter = election.voters.find(v => v.email === formData.email);
+      const voterUser = { email: voter.email, role: 'voter' };
+      localStorage.setItem('currentUser', JSON.stringify(voterUser));
       localStorage.setItem('userEmail', voter.email);
-      navigate('/voter-dashboard');
+      
+      // Navigation will happen after progress bar completes
+      setTimeout(() => {
+        navigate(`/voter-election/${election.id}`);
+      }, 1000);
     }
   };
 
   return (
     <div className="login-container">
-      <div className="login-card">
+      <div className={`login-card ${isLoading ? 'loading' : ''}`}>
         <h1>Welcome Back</h1>
         <div className="login-type-toggle">
           <button
@@ -93,6 +141,7 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               required
+              placeholder="Enter your email"
             />
           </div>
           {loginType === 'admin' ? (
@@ -106,6 +155,7 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  placeholder="Enter your password"
                 />
               </div>
               <div className="forgot-password-link">
@@ -126,9 +176,24 @@ const Login = () => {
               />
             </div>
           )}
-          <button type="submit" className="btn-primary">
-            {loginType === 'admin' ? 'Log In' : 'Access Election'}
+          <button type="submit" className="btn-primary" disabled={isLoading}>
+            {isLoading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <span>Loading...</span>
+              </div>
+            ) : (
+              loginType === 'admin' ? 'Log In' : 'Access Election'
+            )}
           </button>
+          {isLoading && (
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar" 
+                style={{ width: `${loadingProgress}%` }}
+              ></div>
+            </div>
+          )}
         </form>
         {loginType === 'admin' && (
           <p className="signup-link">

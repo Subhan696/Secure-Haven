@@ -80,22 +80,38 @@ const VoterElection = () => {
   };
 
   const handleVote = () => {
-    if (isElectionEnded || hasVoted) return;
-
-    if (!isElectionLive) {
-      setError('This election is not yet open for voting');
-      return;
-    }
-
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser) {
-      setError('You must be logged in to vote');
+      navigate('/login');
       return;
     }
 
-    // Check if all questions have been answered
+    // Check if user has already voted
+    if (hasVoted) {
+      setError('You have already voted in this election');
+      return;
+    }
+
+    // Check if election is still active
+    const now = new Date();
+    const endDate = new Date(election.endDate);
+    if (now > endDate || election.status === 'Ended') {
+      setError('This election has ended. Voting is no longer allowed.');
+      setIsElectionEnded(true);
+      return;
+    }
+
+    // Check if election is live
+    const startDate = new Date(election.startDate);
+    if (now < startDate || election.status !== 'Live') {
+      setError('This election is not active yet. Voting will be allowed when the election goes live.');
+      setIsElectionLive(false);
+      return;
+    }
+
+    // Check if all questions are answered
     const allQuestionsAnswered = election.questions.every((_, index) => 
-      selectedOptions[index] !== null
+      selectedOptions[index] !== undefined
     );
 
     if (!allQuestionsAnswered) {
@@ -220,6 +236,11 @@ const VoterElection = () => {
           <>
             <div className="preview-instructions">
               <h2>Instructions</h2>
+              {election.description && (
+                <div className="election-description">
+                  <p>{election.description}</p>
+                </div>
+              )}
               <ul>
                 <li>Please review each question carefully before making your selection.</li>
                 <li>You can only select one option per question.</li>

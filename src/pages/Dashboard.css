@@ -2,6 +2,7 @@
   min-height: 100vh;
   background: #f5f6fa;
   padding: 2rem;
+  transition: padding 0.3s ease;
 }
 
 .dashboard-header {
@@ -9,6 +10,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .dashboard-header h1 {
@@ -46,6 +49,8 @@
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+  position: relative;
 }
 
 .search-box {
@@ -66,6 +71,11 @@
   border-color: #23395d;
 }
 
+.status-filter {
+  position: relative;
+  z-index: 10;
+}
+
 .status-filter select {
   padding: 0.8rem 1rem;
   border: 1px solid #ddd;
@@ -75,6 +85,19 @@
   cursor: pointer;
   min-width: 150px;
   background: white;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1em;
+  padding-right: 2.5rem;
+}
+
+.status-filter select:focus {
+  border-color: #23395d;
+  box-shadow: 0 0 0 3px rgba(35, 57, 93, 0.1);
 }
 
 .dashboard-list {
@@ -82,6 +105,7 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
+  transition: all 0.3s ease;
 }
 
 .election-card {
@@ -153,21 +177,25 @@
 .election-card-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .view-btn {
-  background: #f8f9fa;
-  color: #23395d;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  text-decoration: none;
+  background: #23395d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .view-btn:hover {
-  background: #e9ecef;
+  background: #1a2b45;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
 }
 
 .dashboard-count {
