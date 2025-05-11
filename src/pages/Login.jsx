@@ -2,6 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
+function PasswordStrengthMeter({ password }) {
+  const getStrength = (pwd) => {
+    let score = 0;
+    if (!pwd) return { label: '', color: '' };
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    if (score <= 1) return { label: 'Weak', color: '#e74c3c' };
+    if (score === 2) return { label: 'Medium', color: '#f1c40f' };
+    if (score >= 3) return { label: 'Strong', color: '#2ecc71' };
+    return { label: '', color: '' };
+  };
+  const { label, color } = getStrength(password);
+  return (
+    <div className="password-strength-meter" style={{ height: '18px', marginTop: '0.5rem' }}>
+      {label && (
+        <span style={{ color, fontWeight: 600, fontSize: '0.95rem' }}>{label}</span>
+      )}
+    </div>
+  );
+}
+
 const Login = () => {
   const navigate = useNavigate();
   const [loginType, setLoginType] = useState('admin'); // 'admin' or 'voter'
@@ -113,7 +136,10 @@ const Login = () => {
   };
 
   return (
-    <div className="login-container">
+    <>
+     
+      <div className="login-container" style={{ minHeight: '100vh', width: '100vw', position: 'relative', zIndex: 1 }}>
+
       <div className={`login-card ${isLoading ? 'loading' : ''}`}>
         <h1>Welcome Back</h1>
         <div className="login-type-toggle">
@@ -133,53 +159,62 @@ const Login = () => {
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="Enter your email"
-            />
-          </div>
+  <input
+    className="form-input"
+    type="email"
+    id="email"
+    name="email"
+    value={formData.email}
+    onChange={handleChange}
+    required
+    placeholder=" "
+    autoComplete="off"
+  />
+  <label className="form-label" htmlFor="email">Email</label>
+</div>
           {loginType === 'admin' ? (
             <>
               <div className="form-group">
-                <label htmlFor="password">Password</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter your password"
-                />
-              </div>
+  <input
+    className="form-input"
+    type="password"
+    id="password"
+    name="password"
+    value={formData.password}
+    onChange={handleChange}
+    required
+    placeholder=" "
+    autoComplete="off"
+  />
+  <label className="form-label" htmlFor="password">Password</label>
+  <PasswordStrengthMeter password={formData.password} />
+</div>
               <div className="forgot-password-link">
                 <a href="/forgot-password">Forgot Password?</a>
               </div>
             </>
           ) : (
             <div className="form-group">
-              <label htmlFor="voterKey">Voter Key</label>
-              <input
-                type="text"
-                id="voterKey"
-                name="voterKey"
-                value={formData.voterKey}
-                onChange={handleChange}
-                required
-                placeholder="Enter your voter key"
-              />
-            </div>
+  <input
+    className="form-input"
+    type="text"
+    id="voterKey"
+    name="voterKey"
+    value={formData.voterKey}
+    onChange={handleChange}
+    required
+    placeholder=" "
+    autoComplete="off"
+  />
+  <label className="form-label" htmlFor="voterKey">Voter Key</label>
+</div>
           )}
           <button type="submit" className="btn-primary" disabled={isLoading}>
             {isLoading ? (
               <div className="loading-container">
-                <div className="loading-spinner"></div>
+                <div className="modern-spinner">
+                  <div className="modern-spinner-ring"></div>
+                </div>
                 <span>Loading...</span>
               </div>
             ) : (
@@ -202,6 +237,7 @@ const Login = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

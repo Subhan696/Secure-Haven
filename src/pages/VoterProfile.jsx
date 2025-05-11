@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import VoterHeader from '../components/VoterHeader';
 import './VoterProfile.css';
 
 const VoterProfile = () => {
+  const location = useLocation();
   const [previousElections, setPreviousElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ const VoterProfile = () => {
   }
 
   return (
-    <div>
+    <div key={location.key}>
       <VoterHeader />
       <div className="voter-profile-container">
         <div className="profile-header">

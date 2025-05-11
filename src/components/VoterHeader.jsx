@@ -36,11 +36,7 @@ const VoterHeader = () => {
     } 
     // For dashboard pages, ensure the user has the admin role
     else if (path.startsWith('/dashboard')) {
-      // Special case for voter registration - allow access from voter pages
-      if (path === '/dashboard/voter-registration') {
-        navigate(path);
-      }
-      else if (currentUser && currentUser.role === 'admin') {
+      if (currentUser && currentUser.role === 'admin') {
         navigate(path);
       } else {
         // If not an admin, show message and don't navigate
@@ -87,13 +83,7 @@ const VoterHeader = () => {
                 <span className="dropdown-icon">📋</span>
                 Voting History
               </button>
-              <button onClick={() => {
-                navigateWithRoleCheck('/dashboard/voter-registration');
-                setIsDropdownOpen(false);
-              }} className="dropdown-item">
-                <span className="dropdown-icon">📝</span>
-                Voter Registration
-              </button>
+
               <button onClick={handleLogout} className="dropdown-item">
                 <span className="dropdown-icon">🚪</span>
                 Logout

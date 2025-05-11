@@ -2,6 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Signup.css';
 
+function PasswordStrengthMeter({ password }) {
+  const getStrength = (pwd) => {
+    let score = 0;
+    if (!pwd) return { label: '', color: '' };
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    if (score <= 1) return { label: 'Weak', color: '#e74c3c' };
+    if (score === 2) return { label: 'Medium', color: '#f1c40f' };
+    if (score >= 3) return { label: 'Strong', color: '#2ecc71' };
+    return { label: '', color: '' };
+  };
+  const { label, color } = getStrength(password);
+  return (
+    <div className="password-strength-meter" style={{ height: '18px', marginTop: '0.5rem' }}>
+      {label && (
+        <span style={{ color, fontWeight: 600, fontSize: '0.95rem' }}>{label}</span>
+      )}
+    </div>
+  );
+}
+
 const Signup = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -110,63 +133,77 @@ const Signup = () => {
   };
 
   return (
-    <div className="signup-container">
+    <>
+     
+      <div className="signup-container" style={{ minHeight: '100vh', width: '100vw', position: 'relative', zIndex: 1 }}>
+
       <div className={`signup-card ${isLoading ? 'loading' : ''}`}>
         <h1>Create Account</h1>
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="name">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="Enter your full name"
-            />
-          </div>
+  <input
+    className="form-input"
+    type="text"
+    id="name"
+    name="name"
+    value={formData.name}
+    onChange={handleChange}
+    required
+    placeholder=" "
+    autoComplete="off"
+  />
+  <label className="form-label" htmlFor="name">Full Name</label>
+</div>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="Enter your email"
-            />
-          </div>
+  <input
+    className="form-input"
+    type="email"
+    id="email"
+    name="email"
+    value={formData.email}
+    onChange={handleChange}
+    required
+    placeholder=" "
+    autoComplete="off"
+  />
+  <label className="form-label" htmlFor="email">Email</label>
+</div>
           <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Create a password"
-            />
-          </div>
+  <input
+    className="form-input"
+    type="password"
+    id="password"
+    name="password"
+    value={formData.password}
+    onChange={handleChange}
+    required
+    placeholder=" "
+    autoComplete="off"
+  />
+  <label className="form-label" htmlFor="password">Password</label>
+  <PasswordStrengthMeter password={formData.password} />
+</div>
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="Confirm your password"
-            />
-          </div>
+  <input
+    className="form-input"
+    type="password"
+    id="confirmPassword"
+    name="confirmPassword"
+    value={formData.confirmPassword}
+    onChange={handleChange}
+    required
+    placeholder=" "
+    autoComplete="off"
+  />
+  <label className="form-label" htmlFor="confirmPassword">Confirm Password</label>
+</div>
           <button type="submit" className="btn-primary" disabled={isLoading}>
             {isLoading ? (
               <div className="loading-container">
-                <div className="loading-spinner"></div>
+                <div className="modern-spinner">
+                  <div className="modern-spinner-ring"></div>
+                </div>
                 <span>Loading...</span>
               </div>
             ) : (
@@ -187,6 +224,7 @@ const Signup = () => {
         </p>
       </div>
     </div>
+    </>
   );
 };
 

@@ -6,7 +6,7 @@ const Dashboard = () => {
   const [email, setEmail] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [elections, setElections] = useState([]);
+  const [allElections, setAllElections] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -73,14 +73,14 @@ const Dashboard = () => {
         election.createdBy === currentUser.email
       );
       
-      setElections(userElections);
+      setAllElections(userElections);
     } else {
-      setElections([]);
+      setAllElections([]);
     }
   }, [navigate]);
 
   // Filter logic
-  const filteredElections = elections.filter(election => {
+  const filteredElections = allElections.filter(election => {
     const matchesSearch = election.title.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter ? election.status === statusFilter : true;
     return matchesSearch && matchesStatus;
@@ -92,11 +92,12 @@ const Dashboard = () => {
         <h1>Dashboard</h1>
         <div className="user-info">
           <span className="user-email">{email}</span>
-          <Link to="/dashboard/create-election-wizard" className="create-election-btn">
-            Create New Election
-          </Link>
         </div>
       </div>
+
+      <Link to="/dashboard/create-election-wizard" className="create-election-btn">
+        Create New Election
+      </Link>
 
       <div className="dashboard-filters">
         <div className="search-box">

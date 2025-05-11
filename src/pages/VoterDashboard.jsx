@@ -4,7 +4,7 @@ import VoterHeader from '../components/VoterHeader';
 import './VoterDashboard.css';
 
 const VoterDashboard = () => {
-  const [elections, setElections] = useState([]);
+  const [allElections, setAllElections] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -52,14 +52,15 @@ const VoterDashboard = () => {
       return { ...election, hasVoted };
     });
 
-    setElections(voterElections);
+    setAllElections(voterElections);
   }, [navigate]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  const filteredElections = elections.filter(election =>
+  // Always filter from the full list
+  const filteredElections = allElections.filter(election =>
     election.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 

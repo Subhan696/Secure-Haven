@@ -4,10 +4,12 @@
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    padding: 80px 40px;
+    padding: 60px 20px;
     background: linear-gradient(135deg, #0c1c2c 0%, #1a2b45 100%);
     color: white;
-    min-height: 80vh;
+    min-height: auto;
+    position: relative;
+    overflow: hidden;
   }
   
   .home-content {
@@ -18,20 +20,22 @@
   }
   
   .home-content h2 {
-    font-size: 3.5rem;
+    font-size: 2.5rem;
     font-weight: 700;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     line-height: 1.2;
     background: linear-gradient(45deg, #ffffff, #e0e0e0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-align: center;
   }
   
   .home-content p {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     line-height: 1.6;
-    margin-bottom: 32px;
+    margin-bottom: 30px;
     color: #e0e0e0;
+    text-align: center;
   }
   
   .btn.start-btn {
@@ -44,14 +48,19 @@
     border-radius: 8px;
     text-decoration: none;
     margin-bottom: 16px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.2s;
     box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-  }
-  
-  .btn.start-btn:hover {
+    outline: none;
+}
+
+.btn.start-btn:hover,
+.btn.start-btn:focus {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-  }
+    background: linear-gradient(45deg, #218838, #28a745);
+    text-decoration: none;
+    outline: none;
+}
   
   .subtext {
     font-size: 0.95rem;
@@ -75,7 +84,8 @@
     justify-content: center;
     align-items: center;
     min-width: 280px;
-    padding: 20px;
+    padding: 20px 0;
+    margin-top: 30px;
     animation: fadeInRight 1s ease-out;
   }
   
@@ -93,7 +103,7 @@
   
   /* Features Section */
   .features-section {
-    padding: 100px 40px;
+    padding: 80px 20px;
     background-color: #ffffff;
     text-align: center;
     color: #23395d;
@@ -155,7 +165,7 @@
   
   /* How It Works Section */
   .how-it-works-section {
-    padding: 100px 40px;
+    padding: 80px 20px;
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
     text-align: center;
   }
@@ -236,9 +246,19 @@
     border-radius: 8px;
     font-size: 1.1rem;
     font-weight: 600;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.2s;
     box-shadow: 0 4px 15px rgba(35, 57, 93, 0.3);
-  }
+    outline: none;
+}
+
+.guide-link:hover,
+.guide-link:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(35, 57, 93, 0.4);
+    background: linear-gradient(45deg, #1a2b45, #23395d);
+    text-decoration: none;
+    outline: none;
+}
   
   .guide-link:hover {
     transform: translateY(-2px);
@@ -247,7 +267,7 @@
   
   /* Reviews Section */
   .reviews-section {
-    padding: 100px 40px;
+    padding: 80px 20px;
     background-color: #ffffff;
     text-align: center;
   }
@@ -322,12 +342,16 @@
     border: 2px solid #23395d;
     border-radius: 8px;
     transition: all 0.3s ease;
-  }
-  
-  .view-all-reviews:hover {
+    outline: none;
+}
+
+.view-all-reviews:hover,
+.view-all-reviews:focus {
     background: #23395d;
     color: white;
-  }
+    text-decoration: none;
+    outline: none;
+}
   
   /* Animations */
   @keyframes fadeInLeft {
@@ -353,36 +377,131 @@
   }
   
   /* Responsive Adjustments */
-  @media (max-width: 768px) {
+  @media (min-width: 768px) {
     .home-section {
-      padding: 60px 20px;
-      text-align: center;
+      padding: 80px 40px;
+      min-height: 80vh;
+      text-align: left;
     }
-  
+
+    .home-content {
+      text-align: left;
+    }
+
     .home-content h2 {
-      font-size: 2.5rem;
+      font-size: 3rem;
+      text-align: left;
     }
-  
+
     .home-content p {
       font-size: 1.1rem;
+      text-align: left;
     }
-  
+
+    .home-image {
+      padding: 20px;
+      margin-top: 0;
+    }
+
     .features-section,
     .how-it-works-section,
     .reviews-section {
-      padding: 60px 20px;
+      padding: 100px 40px;
     }
-  
+  }
+
+  @media (min-width: 992px) {
+    .home-content h2 {
+      font-size: 3.5rem;
+    }
+
+    .home-content p {
+      font-size: 1.25rem;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .home-section {
+      padding: 50px 15px;
+      text-align: center;
+    }
+
+    .home-content h2 {
+      font-size: 2rem;
+      margin-bottom: 15px;
+    }
+
+    .home-content p {
+      font-size: 1rem;
+      margin-bottom: 25px;
+    }
+
+    .btn.start-btn {
+      padding: 12px 24px;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto 15px;
+    }
+
+    .features-section,
+    .how-it-works-section,
+    .reviews-section {
+      padding: 50px 15px;
+    }
+
     .features-section h3,
     .how-it-works-section h3,
     .reviews-section h3 {
-      font-size: 2rem;
+      font-size: 1.75rem;
+      margin-bottom: 40px;
     }
-  
-    .step-card,
+
+    .features-grid,
+    .steps-grid,
+    .review-list {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
     .feature-card,
+    .step-card,
     .review-card {
-      padding: 25px;
+      padding: 20px;
+    }
+
+    .step-number {
+      font-size: 2.5rem;
+      top: 15px;
+      left: 20px;
+    }
+
+    .step-card h4 {
+      font-size: 1.2rem;
+      padding-left: 40px;
+    }
+
+    .guide-link,
+    .view-all-reviews {
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+      padding: 12px 20px;
     }
   }
-  
+
+  @media (max-width: 480px) {
+    .home-content h2 {
+      font-size: 1.8rem;
+    }
+
+    .home-content p {
+      font-size: 0.95rem;
+    }
+
+    .features-section h3,
+    .how-it-works-section h3,
+    .reviews-section h3 {
+      font-size: 1.5rem;
+    }
+  }

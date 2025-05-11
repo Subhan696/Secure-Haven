@@ -28,12 +28,10 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Election Management Pages
 import Dashboard from './pages/Dashboard';
-import CreateElection from './pages/CreateElection';
+import CreateElectionWizard from './pages/CreateElectionWizard';
 import ElectionList from './pages/ElectionList';
 import ElectionDetails from './pages/ElectionDetails';
-import VoterRegistration from './pages/VoterRegistration';
-import Results from './pages/Results';
-import CreateElectionWizard from './pages/CreateElectionWizard';
+
 import ElectionOverview from './pages/ElectionOverview';
 import ElectionSettings from './pages/ElectionSettings';
 import ElectionVoters from './pages/ElectionVoters';
@@ -42,6 +40,7 @@ import ElectionPreview from './pages/ElectionPreview';
 import ElectionLaunch from './pages/ElectionLaunch';
 import AccountSettings from './pages/AccountSettings';
 import VoterDashboard from './pages/VoterDashboard';
+import { useLocation } from 'react-router-dom';
 import VoterElection from './pages/VoterElection';
 import VoterProfile from './pages/VoterProfile';
 
@@ -84,6 +83,11 @@ const withScrollReset = (Component) => {
   );
 };
 
+function VoterDashboardWithKey() {
+  const location = useLocation();
+  return <VoterDashboard key={location.key} />;
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -112,7 +116,6 @@ const router = createBrowserRouter([
         element: <DashboardLayout />,
         children: [
           { path: '', element: <Dashboard /> },
-          { path: 'create-election', element: <CreateElection /> },
           { path: 'create-election-wizard', element: <CreateElectionWizard /> },
           { path: 'elections', element: <ElectionList /> },
           { path: 'account-settings', element: <AccountSettings /> },
@@ -128,8 +131,7 @@ const router = createBrowserRouter([
               { path: 'launch', element: <ElectionLaunch /> },
             ]
           },
-          { path: 'voter-registration', element: <VoterRegistration /> },
-          { path: 'results', element: <Results /> }
+          
         ]
       }
     ]
@@ -137,7 +139,7 @@ const router = createBrowserRouter([
   // Voter routes
   {
     path: '/voter-dashboard',
-    element: <VoterDashboard />,
+    element: <VoterDashboardWithKey />, 
     errorElement: <ErrorBoundary />
   },
   {
