@@ -94,11 +94,35 @@ const Home = () => {
         <div className="review-list">
           {featuredReviews.map((review, index) => (
             <div className="review-card" key={index}>
-              <p>"{review.text}"</p>
-              <div className="review-stars">
-                {'⭐'.repeat(review.stars)}
+              <div className="review-header">
+                <div className="review-meta">
+                  <div className="review-stars">
+                    {[...Array(5)].map((_, i) => (
+                      <span key={i} className={i < review.stars ? 'star selected' : 'star'}>★</span>
+                    ))}
+                    <span className="rating-number">{review.stars}.0</span>
+                  </div>
+                  {review.date && (
+                    <time className="review-date" dateTime={review.date}>
+                      {new Date(review.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </time>
+                  )}
+                </div>
+                {review.isVerified && (
+                  <span className="verified-badge" title="Verified user">
+                    Verified
+                  </span>
+                )}
               </div>
-              <span>{review.author}</span>
+              <p>{review.text}</p>
+              <footer className="review-footer">
+                <div>
+                  <span className="review-author">{review.author}</span>
+                  {review.role && (
+                    <span className="review-role">{review.role}</span>
+                  )}
+                </div>
+              </footer>
             </div>
           ))}
         </div>

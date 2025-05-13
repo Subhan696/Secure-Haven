@@ -32,7 +32,7 @@ const VoterHeader = () => {
   const navigateWithRoleCheck = (path) => {
     // For voter pages, just navigate directly - we're already in voter context
     if (path.startsWith('/voter')) {
-      navigate(path);
+      navigate(path, { state: { force: Date.now() } });
     } 
     // For dashboard pages, ensure the user has the admin role
     else if (path.startsWith('/dashboard')) {

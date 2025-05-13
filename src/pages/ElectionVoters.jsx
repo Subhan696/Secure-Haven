@@ -160,10 +160,12 @@ const ElectionVoters = () => {
     <div className="election-details-layout">
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="election-details-main">
-        <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
-          &#9776;
-        </button>
-        <h2 className="voters-title">Manage Voters</h2>
+        <div className="sidebar-header-row">
+  <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
+    &#9776;
+  </button>
+  <h2 className="voters-title">Manage Voters</h2>
+</div>
         
         {message.text && (
           <div className={`message ${message.type}`}>

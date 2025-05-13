@@ -108,11 +108,13 @@ const ElectionSettings = () => {
   return (
     <div className="election-details-layout">
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <div className="election-details-main">
-        <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
-          &#9776;
-        </button>
-        <h2 className="settings-title">Settings</h2>
+      <div className="election-details-main election-content-animated">
+        <div className="sidebar-header-row">
+  <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
+    &#9776;
+  </button>
+  <h2 className="settings-title">Settings</h2>
+</div>
         <div className="settings-content">
           <div className="settings-tabs">
             {tabs.map(tab => (

@@ -29,27 +29,121 @@
 
 .wizard-step-indicator {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 0.8rem;
+  position: relative;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .wizard-step {
-  padding: 8px 18px;
-  border-radius: 20px;
-  background: #e0e7ef;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+  width: 100px;
+}
+
+.wizard-step::before {
+  content: attr(data-step);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e0e7ef;
   color: #222;
-  font-weight: 400;
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 8px;
   transition: all 0.3s ease;
 }
 
+.wizard-step::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  width: 100%;
+  height: 3px;
+  background-color: #e0e7ef;
+  z-index: -1;
+}
+
+/* Fix for connecting lines */
+.wizard-step-indicator {
+  position: relative;
+}
+
+.wizard-step-indicator::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 70px;
+  right: 70px;
+  height: 3px;
+  background-color: #e0e7ef;
+  z-index: 0;
+}
+
+.wizard-step:last-child::after {
+  display: none;
+}
+
 .wizard-step.active {
+  color: #3498db;
+  font-weight: 600;
+}
+
+.wizard-step.active::before {
   background: #3498db;
   color: #fff;
-  font-weight: 600;
   box-shadow: 0 4px 8px rgba(52, 152, 219, 0.25);
+}
+
+.wizard-step.completed::before {
+  background: #2ecc71;
+  color: #fff;
+}
+
+/* Remove individual step after backgrounds as we're using the main line */
+.wizard-step.completed::after,
+.wizard-step.active::after {
+  background-color: transparent;
+}
+
+/* Progress line styles */
+.wizard-step-indicator[data-current-step="0"]::before {
+  background: linear-gradient(to right, 
+    #3498db 0%, #3498db 12.5%,
+    #e0e7ef 12.5%, #e0e7ef 100%
+  );
+}
+
+.wizard-step-indicator[data-current-step="1"]::before {
+  background: linear-gradient(to right, 
+    #2ecc71 0%, #2ecc71 33.3%,
+    #3498db 33.3%, #3498db 45.8%,
+    #e0e7ef 45.8%, #e0e7ef 100%
+  );
+}
+
+.wizard-step-indicator[data-current-step="2"]::before {
+  background: linear-gradient(to right, 
+    #2ecc71 0%, #2ecc71 66.6%,
+    #3498db 66.6%, #3498db 79.1%,
+    #e0e7ef 79.1%, #e0e7ef 100%
+  );
+}
+
+.wizard-step-indicator[data-current-step="3"]::before {
+  background: linear-gradient(to right, 
+    #2ecc71 0%, #2ecc71 100%
+  );
 }
 
 .wizard-form {

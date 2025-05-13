@@ -77,18 +77,20 @@ const ElectionLaunch = () => {
   return (
     <div className="election-details-layout">
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <div className="election-details-main">
-        <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
-          &#9776;
-        </button>
-        
+      <div className="election-details-main election-content-animated">
+        <div className="sidebar-header-row">
+  <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
+    &#9776;
+  </button>
+</div>
+
         <div className="launch-container">
           <div className="launch-header">
-            <h1 className="launch-title">Launch Election</h1>
-            <div className={`launch-status ${election.status === 'Live' ? 'live' : 'draft'}`}>
-              {election.status === 'Live' ? 'Live' : 'Draft'}
-            </div>
-          </div>
+  <h1 className="launch-title">Launch Election</h1>
+  <div className={`launch-status ${election.status === 'Live' ? 'live' : 'draft'}`}>
+    {election.status === 'Live' ? 'Live' : 'Draft'}
+  </div>
+</div>
 
           <div className="launch-info-section">
             <h2>Election Details</h2>

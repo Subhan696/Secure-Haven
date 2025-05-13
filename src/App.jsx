@@ -30,7 +30,6 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Dashboard from './pages/Dashboard';
 import CreateElectionWizard from './pages/CreateElectionWizard';
 import ElectionList from './pages/ElectionList';
-import ElectionDetails from './pages/ElectionDetails';
 
 import ElectionOverview from './pages/ElectionOverview';
 import ElectionSettings from './pages/ElectionSettings';
@@ -85,7 +84,13 @@ const withScrollReset = (Component) => {
 
 function VoterDashboardWithKey() {
   const location = useLocation();
-  return <VoterDashboard key={location.key} />;
+  const key = location.state?.force || location.key;
+  return <VoterDashboard key={key} />;
+}
+
+function VoterProfileWithKey() {
+  const location = useLocation();
+  return <VoterProfile key={location.key} />;
 }
 
 const router = createBrowserRouter([
@@ -149,7 +154,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/voter-profile',
-    element: <VoterProfile />,
+    element: <VoterProfileWithKey />,
     errorElement: <ErrorBoundary />
   }
 ]);

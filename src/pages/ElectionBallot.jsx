@@ -124,14 +124,16 @@ const ElectionBallot = () => {
   return (
     <div className="election-details-layout">
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <div className="election-details-main">
-        <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
-          &#9776;
-        </button>
-        <h2 className="ballot-title">Ballot</h2>
-        {!isLive ? (
+      <div className="election-details-main election-content-animated">
+        <div className="sidebar-header-row">
+  <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
+    &#9776;
+  </button>
+  <h2 className="ballot-title">Ballot</h2>
+</div>
+        {election && election.status === 'Ended' ? (
           <div className="ballot-closed-msg">
-            This election is not live. Please check the start and end time in settings.
+            This election has ended. Ballot editing is no longer allowed.
           </div>
         ) : (
           <div className="ballot-panel">

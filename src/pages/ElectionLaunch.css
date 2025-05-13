@@ -171,6 +171,21 @@
   cursor: not-allowed;
 }
 
+.election-content-animated {
+  animation: fadeSlideIn 0.45s cubic-bezier(0.36, 0.66, 0.04, 1) both;
+}
+
+@keyframes fadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .launch-success {
   display: inline-flex;
   align-items: center;

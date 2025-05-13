@@ -19,13 +19,14 @@ const timezones = [
 
 function StepIndicator({ currentStep }) {
   return (
-    <div className="wizard-step-indicator">
+    <div className="wizard-step-indicator" data-current-step={currentStep}>
       {steps.map((step, idx) => (
         <div
           key={step}
-          className={`wizard-step ${idx === currentStep ? 'active' : ''}`}
+          className={`wizard-step ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
+          data-step={idx + 1}
         >
-          {idx + 1}. {step}
+          {step}
         </div>
       ))}
     </div>
