@@ -260,6 +260,16 @@
   margin-left: auto;
 }
 
+/* Sidebar-aware layout fix */
+@media (min-width: 901px) {
+  .election-details-layout {
+    margin-left: 220px;
+  }
+  .election-details-main {
+    padding-left: 0;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .overview-main {

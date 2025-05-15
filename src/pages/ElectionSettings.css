@@ -151,6 +151,16 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Sidebar-aware layout fix */
+@media (min-width: 901px) {
+  .election-details-layout {
+    margin-left: 220px;
+  }
+  .election-details-main {
+    padding-left: 0;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .settings-title {

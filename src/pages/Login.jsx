@@ -130,7 +130,7 @@ const Login = () => {
       
       // Navigation will happen after progress bar completes
       setTimeout(() => {
-        navigate(`/voter-election/${election.id}`);
+        navigate('/voter-dashboard');
       }, 1000);
     }
   };

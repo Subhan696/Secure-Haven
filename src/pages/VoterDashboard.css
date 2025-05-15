@@ -253,6 +253,38 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .voter-dashboard-container {
+    padding: 0.5rem;
+  }
+  .voter-dashboard-content {
+    padding: 0.5rem;
+  }
+  .voter-dashboard-header h1 {
+    font-size: 1.2rem;
+    text-align: center;
+  }
+  .voter-dashboard-list {
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .election-card {
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.98rem;
+  }
+  .election-card-header h3 {
+    font-size: 1.05rem;
+  }
+  .election-status {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.7rem;
+  }
+  .no-elections {
+    padding: 1.2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+
   .voter-dashboard-content {
     padding: 1.5rem;
   }

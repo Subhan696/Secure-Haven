@@ -62,7 +62,7 @@ const VoterHeader = () => {
           <span className="user-email">{currentUser?.email}</span>
           <span className="user-role">Voter</span>
         </div>
-        <div className="profile-dropdown" ref={dropdownRef}>
+        <div className={`profile-dropdown${isDropdownOpen ? ' open' : ''}`} ref={dropdownRef}>
           <button className="profile-button" onClick={toggleDropdown}>
             <span className="profile-icon">👤</span>
           </button>

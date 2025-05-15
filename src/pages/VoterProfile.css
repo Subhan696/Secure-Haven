@@ -99,14 +99,45 @@
 
 @media (max-width: 768px) {
   .voter-profile-container {
-    padding: 1rem;
+    padding: 0.5rem;
   }
-
+  .profile-header {
+    margin-bottom: 2rem;
+  }
   .profile-header h1 {
-    font-size: 2rem;
+    font-size: 1.3rem;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
   }
-
+  .profile-header p {
+    font-size: 1rem;
+  }
   .elections-list {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
-} 
+  .election-card {
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.98rem;
+  }
+  .election-info h3 {
+    font-size: 1.1rem;
+  }
+  .election-date, .election-position {
+    font-size: 0.95rem;
+  }
+  .status-badge {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.7rem;
+  }
+  .no-elections {
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  .loading {
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+}

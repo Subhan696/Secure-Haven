@@ -42,6 +42,7 @@ import VoterDashboard from './pages/VoterDashboard';
 import { useLocation } from 'react-router-dom';
 import VoterElection from './pages/VoterElection';
 import VoterProfile from './pages/VoterProfile';
+import VoterElectionResults from './pages/VoterElectionResults';
 
 import './App.css';
 
@@ -150,6 +151,11 @@ const router = createBrowserRouter([
   {
     path: '/voter-election/:electionId',
     element: <VoterElection />,
+    errorElement: <ErrorBoundary />
+  },
+  {
+    path: '/voter-election-results/:electionId',
+    element: <VoterElectionResults />,
     errorElement: <ErrorBoundary />
   },
   {
