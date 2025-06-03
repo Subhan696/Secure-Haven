@@ -200,57 +200,299 @@ router.post('/login', async (req, res) => {
 });
 
 // Cast a vote (authenticated users only)
-router.post('/', auth, validate(castVoteValidation), async (req, res) => {
+router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
   try {
+    console.log('Received vote submission:', JSON.stringify(req.body, null, 2));
+    console.log('Authenticated user:', req.user);
+    
     const { election: electionId, candidate } = req.body;
     const voter = req.user.id; // Get voter ID from authenticated user
     
     // Validate input
-    if (!electionId || !candidate) {
-      return res.status(400).json({ message: 'Please provide election ID and candidate' });
+    if (!electionId) {
+      console.error('Missing election ID in request');
+      return res.status(400).json({ message: 'Election ID is required' });
+    }
+    
+    if (!candidate) {
+      console.error('Missing candidate in request');
+      return res.status(400).json({ message: 'Candidate selection is required' });
     }
     
     // Check if election exists
     const election = await Election.findById(electionId);
     if (!election) {
+      console.error(`Election not found with ID: ${electionId}`);
       return res.status(404).json({ message: 'Election not found' });
     }
     
-    // Check if election is active
+    console.log(`Found election: ${election.title} (${election._id})`);
+    
+    // Check election status
     const now = new Date();
-    if (now < election.startDate) {
-      return res.status(400).json({ message: 'Election has not started yet' });
+    const startDate = new Date(election.startDate);
+    const endDate = new Date(election.endDate);
+    
+    if (now < startDate) {
+      console.error(`Election has not started yet. Starts at: ${startDate}`);
+      return res.status(400).json({ 
+        message: `Election has not started yet. It will begin on ${startDate.toLocaleString()}` 
+      });
     }
-    if (now > election.endDate) {
-      return res.status(400).json({ message: 'Election has ended' });
+    
+    if (now > endDate) {
+      console.error(`Election has ended. Ended at: ${endDate}`);
+      return res.status(400).json({ 
+        message: 'Election has ended. Voting is no longer allowed.' 
+      });
+    }
+    
+    // Check if election is active
+    const isActive = ['live', 'active'].includes(election.status?.toLowerCase());
+    if (!isActive) {
+      console.error(`Election is not active. Status: ${election.status}`);
+      return res.status(400).json({ 
+        message: 'This election is not currently active. Please check back later.' 
+      });
     }
     
     // Check if user is authorized to vote in this election
-    const isVoter = election.voters.some(v => v.toString() === voter);
+    const voterEmail = req.user.email?.toLowerCase();
+    const isVoter = election.voters.some(v => {
+      const voterEmailMatch = v.email?.toLowerCase() === voterEmail;
+      const voterIdMatch = v._id?.toString() === voter || v.toString() === voter;
+      return voterEmailMatch || voterIdMatch;
+    });
+    
     if (!isVoter && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'You are not authorized to vote in this election' });
+      console.error(`User ${voter} is not authorized to vote in election ${election._id}`);
+      return res.status(403).json({ 
+        message: 'You are not authorized to vote in this election. Please check if you are registered as a voter.' 
+      });
     }
     
-    // Check if candidate exists in election
-    const candidateExists = election.candidates.some(c => c.name === candidate);
-    if (!candidateExists) {
-      return res.status(400).json({ message: 'Invalid candidate' });
+    // Check if the selected option exists in any of the questions
+    let isValidOption = false;
+    let questionWithOption = null;
+    
+    // Check each question's options for the selected candidate
+    for (const question of election.questions || []) {
+      if (question.options && question.options.includes(candidate)) {
+        isValidOption = true;
+        questionWithOption = question;
+        break;
+      }
     }
     
-    // Prevent double voting
-    const existingVote = await Vote.findOne({ election: electionId, voter });
+    if (!isValidOption) {
+      console.error(`Invalid option selected: ${candidate}. Available options:`, 
+        election.questions?.map(q => q.options).flat() || []);
+      return res.status(400).json({ 
+        message: 'Invalid option selected. Please try again.' 
+      });
+    }
+    
+    // Use the selected option as is
+    const candidateName = candidate;
+    
+    // Find the voter in the election's voters list to get their ID
+    console.log('Looking for voter in election.voters:', {
+      voterEmail,
+      voterId: voter,
+      votersList: election.voters
+    });
+    
+    const voterInElection = election.voters.find(v => {
+      const emailMatch = v.email?.toLowerCase() === voterEmail?.toLowerCase();
+      const idMatch = v._id?.toString() === voter?.toString() || v.toString() === voter?.toString();
+      console.log('Voter check:', { v, emailMatch, idMatch });
+      return emailMatch || idMatch;
+    });
+    
+    if (!voterInElection) {
+      console.error(`Voter not found in election ${electionId} voters list`, {
+        voterEmail,
+        voterId: voter,
+        availableVoters: election.voters.map(v => ({
+          _id: v._id?.toString(),
+          email: v.email,
+          id: v.id,
+          toString: v.toString()
+        }))
+      });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Voter not found in this election. Please contact the administrator.' 
+      });
+    }
+    
+    // Prevent double voting - check by both voter ID and email
+    const existingVote = await Vote.findOne({
+      $and: [
+        { election: electionId },
+        {
+          $or: [
+            { voter: voterInElection._id || voterInElection },
+            { 'voter.email': voterEmail }
+          ]
+        }
+      ]
+    });
+    
     if (existingVote) {
-      return res.status(400).json({ message: 'You have already voted in this election' });
+      console.error(`User ${voterEmail} has already voted in election ${electionId}`);
+      return res.status(400).json({ 
+        message: 'You have already voted in this election. Only one vote per user is allowed.' 
+      });
     }
     
-    // Cast vote
-    const vote = new Vote({ election: electionId, voter, candidate });
-    await vote.save();
+    console.log('Creating new vote with data:', {
+      election: electionId,
+      voter: voterInElection._id || voterInElection,
+      voterEmail: voterEmail,
+      candidate: candidateName
+    });
     
-    res.status(201).json({ message: 'Vote cast successfully', vote });
+    try {
+      // Create new vote with proper voter identification
+      const voteData = {
+        election: electionId,
+        candidate: candidateName,
+        voterEmail: voterEmail
+      };
+      
+      // Handle different voter ID formats
+      if (voterInElection._id) {
+        voteData.voter = voterInElection._id;
+      } else if (voterInElection.id) {
+        voteData.voter = voterInElection.id;
+      } else if (mongoose.Types.ObjectId.isValid(voterInElection)) {
+        voteData.voter = voterInElection;
+      } else {
+        // If we can't determine a proper ID, use the email as a fallback
+        voteData.voter = voterEmail;
+      }
+      
+      console.log('Creating vote with data:', JSON.stringify(voteData, null, 2));
+      
+      // Create and save the vote in one step
+      const vote = await Vote.create(voteData);
+      console.log('Vote saved successfully:', vote);
+      
+      // Update the election's votes array
+      await Election.findByIdAndUpdate(
+        electionId,
+        { $addToSet: { votes: vote._id } },
+        { new: true }
+      );
+      
+      // Update candidate vote count if needed
+      try {
+        await Election.updateOne(
+          { _id: electionId, 'questions.options': candidateName },
+          { $inc: { 'questions.$[].$[option].votes': 1 } },
+          { 
+            arrayFilters: [{ 'option': candidateName }]
+          }
+        );
+      } catch (updateError) {
+        console.warn('Could not update candidate vote count:', updateError.message);
+        // Continue even if we can't update the vote count
+      }
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Vote recorded successfully',
+        voteId: vote._id
+      });
+    } catch (saveError) {
+      console.error('Error saving vote:', {
+        message: saveError.message,
+        name: saveError.name,
+        code: saveError.code,
+        keyPattern: saveError.keyPattern,
+        keyValue: saveError.keyValue,
+        errors: saveError.errors,
+        stack: saveError.stack
+      });
+      
+      // Handle duplicate key error (already voted)
+      if (saveError.code === 11000) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already voted in this election.'
+        });
+      }
+      
+      // Handle validation errors
+      if (saveError.name === 'ValidationError') {
+        const errors = Object.values(saveError.errors).map(e => e.message);
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors
+        });
+      }
+      
+      // For any other error
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to process your vote. Please try again.',
+        error: process.env.NODE_ENV === 'development' ? saveError.message : undefined
+      });
+    }
+    
   } catch (err) {
-    console.error('Vote casting error:', err);
-    res.status(500).json({ message: err.message });
+    console.error('Vote casting error - Full error:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+      code: err.code,
+      errors: err.errors,
+      request: {
+        body: req.body,
+        user: req.user,
+        params: req.params,
+        query: req.query
+      }
+    });
+    
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duplicate vote detected. You have already voted in this election.'
+      });
+    }
+    
+    // Handle CastError (invalid ObjectId, etc)
+    if (err.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid ${err.path}: ${err.value}`
+      });
+    }
+    
+    // For other errors, send a generic error message
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to process your vote. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      } : undefined
+    });
   }
 });
 
@@ -380,17 +622,37 @@ router.get('/me/history', auth, async (req, res) => {
 // Check if user has voted in an election
 router.get('/check/:electionId', auth, async (req, res) => {
   try {
+    const { electionId } = req.params;
+    const voterId = req.user.id;
+    
+    // Check if election exists
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ message: 'Election not found' });
+    }
+    
+    // Find if user has already voted
     const vote = await Vote.findOne({ 
-      election: req.params.electionId, 
-      voter: req.user.id 
+      election: electionId, 
+      $or: [
+        { voter: voterId },
+        { 'voter._id': voterId },
+        { 'voter.email': req.user.email?.toLowerCase() }
+      ]
     });
     
     res.status(200).json({
+      success: true,
       hasVoted: !!vote,
       vote: vote || null
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error checking vote status:', err);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error checking vote status',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

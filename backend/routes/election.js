@@ -1,10 +1,34 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
+const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
 const Election = require('../models/Election');
 const Vote = require('../models/Vote');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
-const admin = require('../middleware/admin');
+
+// Get available elections for the current voter
+router.get('/available', auth, async (req, res) => {
+  try {
+    // Get the current user's email from the token
+    const userEmail = req.user.email.toLowerCase();
+    
+    // Find elections where the current user is a voter and the election is active
+    const now = new Date();
+    
+    const elections = await Election.find({
+      'voters.email': userEmail,
+      status: { $in: ['live', 'active', 'Live', 'Active'] },
+      startDate: { $lte: now },
+      endDate: { $gte: now }
+    }).select('-voters -candidates -questions -createdAt -updatedAt -__v');
+    
+    res.status(200).json(elections);
+  } catch (err) {
+    console.error('Error fetching available elections:', err);
+    res.status(500).json({ message: 'Server error while fetching available elections' });
+  }
+});
 const validate = require('../middleware/validate');
 const {
   createElectionValidation,
