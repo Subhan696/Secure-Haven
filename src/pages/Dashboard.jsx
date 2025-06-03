@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import api from '../utils/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -8,75 +10,48 @@ const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [allElections, setAllElections] = useState([]);
   const navigate = useNavigate();
+  const { currentUser } = useContext(AuthContext);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (!currentUser || currentUser.role !== 'admin') {
+    // Check if user is authenticated and has admin role
+    if (!currentUser) {
       navigate('/login');
       return;
     }
 
-    setEmail(currentUser.email);
-    
-    // Read elections from localStorage
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const now = new Date();
-      let allElections = JSON.parse(stored);
-      let updatedElections = false;
-      
-      // Update election statuses based on current date
-      allElections = allElections.map(election => {
-        const startDate = new Date(election.startDate);
-        const endDate = new Date(election.endDate);
-        let status = election.status;
-        
-        // Update status based on dates if the election has been launched
-        if (election.launched) {
-          if (now > endDate && status !== 'Ended') {
-            status = 'Ended';
-            updatedElections = true;
-          } else if (now >= startDate && now <= endDate && status !== 'Live') {
-            status = 'Live';
-            updatedElections = true;
-          } else if (now < startDate && status !== 'Upcoming') {
-            status = 'Upcoming';
-            updatedElections = true;
-          }
-        } else {
-          // If not launched and end date has passed, it should be deleted
-          // We'll handle this in the filter below
-        }
-        
-        return { ...election, status };
-      });
-      
-      // Filter out elections that weren't launched and have ended
-      const validElections = allElections.filter(election => {
-        if (!election.launched) {
-          const endDate = new Date(election.endDate);
-          if (now > endDate) {
-            updatedElections = true;
-            return false; // Remove this election
-          }
-        }
-        return true;
-      });
-      
-      // Save updated elections back to localStorage if any changes were made
-      if (updatedElections) {
-        localStorage.setItem('elections', JSON.stringify(validElections));
-      }
-      
-      // Only show elections created by the current admin
-      const userElections = validElections.filter(election => 
-        election.createdBy === currentUser.email
-      );
-      
-      setAllElections(userElections);
-    } else {
-      setAllElections([]);
+    // Set email from current user
+    if (currentUser.email) {
+      setEmail(currentUser.email);
     }
+    
+    // Fetch elections from backend API
+    const fetchElections = async () => {
+      try {
+        setLoading(true);
+        // The backend API will handle filtering by the current user's created elections
+        // and will calculate the status based on dates
+        const response = await api.get('/elections');
+        
+        // The response includes elections and pagination info
+        if (response.data && response.data.elections) {
+          setAllElections(response.data.elections);
+        } else {
+          setAllElections([]);
+        }
+        setError('');
+      } catch (err) {
+        console.error('Error fetching elections:', err);
+        setError('Failed to load elections. Please try again later.');
+        setAllElections([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchElections();
   }, [navigate]);
 
   // Filter logic
@@ -114,40 +89,60 @@ const Dashboard = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">All Status</option>
-            <option value="Building">Building</option>
-            <option value="Upcoming">Upcoming</option>
-            <option value="Live">Live</option>
-            <option value="Ended">Ended</option>
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="live">Live</option>
+            <option value="completed">Completed</option>
+            <option value="ended">Ended</option>
           </select>
         </div>
       </div>
 
-      <div className="dashboard-list">
-        {filteredElections.map(election => (
-          <div className="election-card" key={election.id}>
-            <div className="election-card-header">
-              <h3>{election.title}</h3>
-              <div className={`election-status ${election.status.toLowerCase()}`}>
-                {election.status}
+      {/* Display error message if there is one */}
+      {error && <div className="error-message">{error}</div>}
+
+      {/* Show loading indicator */}
+      {loading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading elections...</p>
+        </div>
+      ) : (
+        <>
+          <div className="dashboard-list">
+            {filteredElections.length === 0 ? (
+              <div className="no-elections">
+                <p>No elections found. Create a new election to get started.</p>
               </div>
-            </div>
-            <div className="election-card-details">
-              <p>Start: {new Date(election.startDate).toLocaleDateString()}</p>
-              <p>End: {new Date(election.endDate).toLocaleDateString()}</p>
-              <p>Questions: {election.questions?.length || 0}</p>
-              <p>Voters: {election.voters?.length || 0}</p>
-            </div>
-            <div className="election-card-actions">
-              <Link to={`/dashboard/elections/${election.id}/overview`} className="view-btn">
-                View Details
-              </Link>
-            </div>
+            ) : (
+              filteredElections.map(election => (
+                <div className="election-card" key={election._id}>
+                  <div className="election-card-header">
+                    <h3>{election.title}</h3>
+                    <div className={`election-status ${election.status?.toLowerCase()}`}>
+                      {election.status}
+                    </div>
+                  </div>
+                  <div className="election-card-details">
+                    <p>Start: {new Date(election.startDate).toLocaleDateString()}</p>
+                    <p>End: {new Date(election.endDate).toLocaleDateString()}</p>
+                    <p>Candidates: {election.candidates?.length || 0}</p>
+                    <p>Voters: {election.voters?.length || 0}</p>
+                  </div>
+                  <div className="election-card-actions">
+                    <Link to={`/dashboard/elections/${election._id}/overview`} className="view-btn">
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        ))}
-      </div>
-      <div className="dashboard-count">
-        Showing {filteredElections.length} to {filteredElections.length} of {filteredElections.length} Election{filteredElections.length !== 1 ? 's' : ''}
-      </div>
+          <div className="dashboard-count">
+            Showing {filteredElections.length} of {allElections.length} Election{allElections.length !== 1 ? 's' : ''}
+          </div>
+        </>
+      )}
     </div>
   );
 };

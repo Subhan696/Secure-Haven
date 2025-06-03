@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 import './ForgotPassword.css';
 
@@ -13,40 +14,15 @@ const ForgotPassword = () => {
     setLoading(true);
     setMessage('');
 
-    try {
-      // Check if user exists
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => u.email === email);
-
-      if (!user) {
+    api.post('/password-reset/request', { email })
+      .then(() => {
         setMessage('If an account exists, a verification code will be sent to your email.');
-        setLoading(false);
-        return;
-      }
-
-      // Generate verification code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Store reset request
-      const resetRequests = JSON.parse(localStorage.getItem('resetRequests') || '{}');
-      resetRequests[email] = {
-        verificationCode,
-        expires: new Date(Date.now() + 15 * 60000).toISOString(), // 15 minutes
-        attempts: 0
-      };
-      
-      localStorage.setItem('resetRequests', JSON.stringify(resetRequests));
-      
-      // In a real app, this would send an email
-      console.log(`Verification code for ${email}: ${verificationCode}`);
-      
-      // Navigate to reset password page with email
-      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
-    } catch (error) {
-      setMessage('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      })
+      .catch(() => {
+        setMessage('If an account exists, a verification code will be sent to your email.');
+      })
+      .finally(() => setLoading(false));
   };
 
   return (

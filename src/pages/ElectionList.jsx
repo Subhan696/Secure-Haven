@@ -8,14 +8,16 @@ const ElectionList = () => {
   const [filter, setFilter] = useState('all'); // all, active, upcoming, completed
 
   useEffect(() => {
-    // Read from localStorage
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      setElections(JSON.parse(stored));
-    } else {
-      setElections([]);
-    }
-    setLoading(false);
+    const fetchElections = async () => {
+      try {
+        const res = await api.get('/api/elections');
+        setElections(res.data);
+        setLoading(false);
+      } catch (err) {
+        // handle error
+      }
+    };
+    fetchElections();
   }, []);
 
   const getStatusBadgeClass = (status) => {

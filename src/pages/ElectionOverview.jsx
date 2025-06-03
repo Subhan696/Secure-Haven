@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ElectionSidebar from '../components/ElectionSidebar';
+import api from '../utils/api';
 import './ElectionOverview.css';
 
 const colorCards = [
@@ -14,62 +15,69 @@ const ElectionOverview = () => {
   const [election, setElection] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const found = JSON.parse(stored).find(e => String(e.id) === String(id));
-      if (found) {
-        // Update election status based on dates and launched status
-        const now = new Date();
-        const startDate = new Date(found.startDate);
-        const endDate = new Date(found.endDate);
+    // Fetch election data from backend API
+    const fetchElection = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/elections/${id}`);
         
-        let status = found.status;
-        
-        // Only update status if the election has been launched
-        if (found.launched) {
-          if (now > endDate) {
-            // If end date has passed, mark as Ended
-            status = 'Ended';
-          } else if (now >= startDate && now <= endDate) {
-            // If current time is between start and end dates, mark as Live
-            status = 'Live';
-          } else if (now < startDate) {
-            // If start date is in the future, mark as Upcoming
-            status = 'Upcoming';
-          }
+        if (response.data) {
+          console.log('Election data received:', response.data);
+          console.log('Election status:', response.data.status);
+          setElection(response.data);
+          setError('');
         } else {
-          // If not launched yet, check if it should be deleted
-          if (now > endDate) {
-            // If end date has passed and election wasn't launched, it should be deleted
-            const elections = JSON.parse(stored);
-            const filteredElections = elections.filter(e => String(e.id) !== String(id));
-            localStorage.setItem('elections', JSON.stringify(filteredElections));
-            // Set election to null and return early
-            setElection(null);
-            return;
-          } else {
-            // If not launched and end date hasn't passed, keep as Draft
-            status = 'Draft';
-          }
+          setElection(null);
+          setError('Election not found');
         }
-        
-        // Update status in localStorage if it changed
-        if (status !== found.status) {
-          const elections = JSON.parse(stored);
-          const updatedElections = elections.map(e => 
-            String(e.id) === String(id) ? { ...e, status } : e
-          );
-          localStorage.setItem('elections', JSON.stringify(updatedElections));
-          found.status = status;
-        }
-        
-        setElection(found);
+      } catch (err) {
+        console.error('Error fetching election:', err);
+        setElection(null);
+        setError(err.response?.data?.message || 'Failed to load election details');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchElection();
   }, [id]);
 
-  if (!election) return <div className="loading">Election not found</div>;
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading election details...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="error-container">
+        <div className="error-icon">⚠️</div>
+        <p className="error-message">{error}</p>
+        <button onClick={() => window.history.back()} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+  
+  if (!election) {
+    return (
+      <div className="not-found-container">
+        <div className="not-found-icon">🔍</div>
+        <p className="not-found-message">Election not found</p>
+        <button onClick={() => window.history.back()} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   // Calculate unique voters who have cast votes
   const uniqueVoters = election.votes ? new Set(election.votes.map(vote => vote.voterEmail)).size : 0;
@@ -87,16 +95,31 @@ const ElectionOverview = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Live':
+      case 'live':
         return '#2ecc71';
-      case 'Upcoming':
+      case 'scheduled':
         return '#f1c40f';
-      case 'Ended':
+      case 'ended':
         return '#e74c3c';
-      case 'Building':
+      case 'draft':
         return '#3498db';
       default:
         return '#95a5a6';
+    }
+  };
+  
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'live':
+        return 'Live';
+      case 'scheduled':
+        return 'Scheduled';
+      case 'ended':
+        return 'Ended';
+      case 'draft':
+        return 'Draft';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -109,10 +132,19 @@ const ElectionOverview = () => {
     &#9776;
   </button>
   <h2 className="overview-title">{election.title || 'Election'} - Overview</h2>
+  <div className="election-status" style={{ background: getStatusColor(election.status), color: 'white', padding: '5px 10px', borderRadius: '4px', marginLeft: '10px', fontWeight: 'bold', display: 'inline-block' }}>
+    {election.status ? getStatusLabel(election.status) : 'Draft'}
+  </div>
 </div>
         <div className="overview-content">
           <div className="overview-main">
             <div className="overview-row">
+              <div className="overview-card">
+                <div className="overview-card-label">Status</div>
+                <div className="overview-card-value" style={{ color: getStatusColor(election.status), fontWeight: 'bold' }}>
+                  {election.status ? getStatusLabel(election.status) : 'Draft'}
+                </div>
+              </div>
               <div className="overview-card">
                 <div className="overview-card-label">Start Date</div>
                 <div className="overview-card-value">{election.startDate ? new Date(election.startDate).toLocaleString() : ''}</div>

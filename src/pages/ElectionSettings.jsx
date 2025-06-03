@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ElectionSidebar from '../components/ElectionSidebar';
+import api from '../utils/api';
 import './ElectionSettings.css';
 
 const tabs = [
   { label: 'General', key: 'general' },
   { label: 'Dates', key: 'dates' },
   { label: 'Voters', key: 'voters' },
+  { label: 'Launch', key: 'launch' },
   { label: 'Delete', key: 'delete' },
 ];
 
@@ -37,21 +39,43 @@ const ElectionSettings = () => {
   const [editEmail, setEditEmail] = useState('');
   // Delete
   const [showDelete, setShowDelete] = useState(false);
+  // Launch
+  const [isLaunching, setIsLaunching] = useState(false);
+  const [launchMessage, setLaunchMessage] = useState('');
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const found = JSON.parse(stored).find(e => String(e.id) === String(id));
-      setElection(found);
-      if (found) {
-        setTitle(found.title || '');
-        setDescription(found.description || '');
-        setStartDate(found.startDate || '');
-        setEndDate(found.endDate || '');
-        setTimezone(found.timezone || 'Asia/Karachi');
-        setVoters(found.voters || []);
+    const fetchElection = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/elections/${id}`);
+        
+        if (response.data) {
+          const election = response.data;
+          setElection(election);
+          setTitle(election.title || '');
+          setDescription(election.description || '');
+          setStartDate(election.startDate || '');
+          setEndDate(election.endDate || '');
+          setTimezone(election.timezone || 'Asia/Karachi');
+          setVoters(election.voters || []);
+          setError('');
+        } else {
+          setElection(null);
+          setError('Election not found');
+        }
+      } catch (err) {
+        console.error('Error fetching election:', err);
+        setElection(null);
+        setError(err.response?.data?.message || 'Failed to load election details');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchElection();
   }, [id]);
 
   // General
@@ -80,30 +104,115 @@ const ElectionSettings = () => {
     updateElection({ voters: updated });
   };
   // Delete
-  const handleDeleteElection = () => {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const arr = JSON.parse(stored).filter(e => String(e.id) !== String(id));
-      localStorage.setItem('elections', JSON.stringify(arr));
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const handleDeleteElection = async () => {
+    try {
+      setIsDeleting(true);
+      setError('');
+      
+      // Send request to backend API to delete the election
+      await api.delete(`/elections/${id}`);
+      
+      // Navigate to dashboard after successful deletion
       navigate('/dashboard');
+    } catch (err) {
+      console.error('Error deleting election:', err);
+      setError(err.response?.data?.message || 'Failed to delete election. Please try again.');
+      setIsDeleting(false);
+      setShowDelete(false);
+    }
+  };
+  
+  // Launch election
+  const handleLaunchElection = async (status) => {
+    try {
+      setIsLaunching(true);
+      setError('');
+      setLaunchMessage('');
+      
+      // Send request to backend API to update election status
+      const response = await api.put(`/elections/${id}/status`, { status });
+      
+      if (response.data) {
+        // Update election state with new status
+        setElection(prev => ({
+          ...prev,
+          status: status
+        }));
+        
+        // Show success message
+        setLaunchMessage(
+          status === 'live' ? 'Election launched successfully!' : 
+          status === 'ended' ? 'Election ended successfully!' : 
+          'Election status updated successfully!'
+        );
+      }
+    } catch (err) {
+      console.error('Error updating election status:', err);
+      setError(err.message || 'Failed to update election status. Please try again.');
+    } finally {
+      setIsLaunching(false);
     }
   };
 
-  function updateElection(fields) {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const arr = JSON.parse(stored).map(e =>
-        String(e.id) === String(id) ? { ...e, ...fields } : e
-      );
-      localStorage.setItem('elections', JSON.stringify(arr));
-      setElection(arr.find(e => String(e.id) === String(id)));
+  const [isSaving, setIsSaving] = useState(false);
+  
+  async function updateElection(fields) {
+    try {
+      setIsSaving(true);
+      setError('');
       
-      // Dispatch a custom event to notify other components that the election has been updated
-      window.dispatchEvent(new CustomEvent('electionUpdated', { detail: { id, fields } }));
+      // Send request to backend API to update the election
+      const response = await api.put(`/elections/${id}`, fields);
+      
+      if (response.data) {
+        // Update the local state with the updated election data
+        setElection(response.data);
+        
+        // Show success message or update UI as needed
+        // You could add a success state here if desired
+      }
+    } catch (err) {
+      console.error('Error updating election:', err);
+      setError(err.response?.data?.message || 'Failed to update election. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   }
 
-  if (!election) return <div className="loading">Election not found</div>;
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading election details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <div className="error-icon">⚠️</div>
+        <p className="error-message">{error}</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  if (!election) {
+    return (
+      <div className="not-found-container">
+        <div className="not-found-icon">🔍</div>
+        <p className="not-found-message">Election not found</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="election-details-layout">
@@ -218,6 +327,60 @@ const ElectionSettings = () => {
                     </li>
                   ))}
                 </ul>
+              </>
+            )}
+            {activeTab === 'launch' && (
+              <>
+                <h3 className="settings-panel-title">Launch Election</h3>
+                {launchMessage && (
+                  <div style={{ background: '#d4edda', color: '#155724', padding: '10px 15px', borderRadius: '4px', marginBottom: '20px' }}>
+                    {launchMessage}
+                  </div>
+                )}
+                {error && (
+                  <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px 15px', borderRadius: '4px', marginBottom: '20px' }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ marginBottom: '20px' }}>
+                  <p><strong>Current Status:</strong> {election?.status || 'draft'}</p>
+                  <p>Change the status of your election to launch it or end it.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                  <button 
+                    className="settings-save-btn" 
+                    style={{ background: '#28a745' }}
+                    onClick={() => handleLaunchElection('live')}
+                    disabled={isLaunching || election?.status === 'live'}
+                  >
+                    {isLaunching ? 'Launching...' : 'Launch Election'}
+                  </button>
+                  <button 
+                    className="settings-save-btn" 
+                    style={{ background: '#ffc107', color: '#212529' }}
+                    onClick={() => handleLaunchElection('scheduled')}
+                    disabled={isLaunching || election?.status === 'scheduled'}
+                  >
+                    {isLaunching ? 'Scheduling...' : 'Schedule Election'}
+                  </button>
+                  <button 
+                    className="cancel-btn" 
+                    style={{ background: '#dc3545', color: '#fff' }}
+                    onClick={() => handleLaunchElection('ended')}
+                    disabled={isLaunching || election?.status === 'ended' || election?.status === 'draft'}
+                  >
+                    {isLaunching ? 'Ending...' : 'End Election'}
+                  </button>
+                </div>
+                <div style={{ marginTop: '20px' }}>
+                  <h4>Status Explanation:</h4>
+                  <ul style={{ listStyleType: 'disc', paddingLeft: '20px' }}>
+                    <li><strong>Draft:</strong> Election is being prepared and is not visible to voters.</li>
+                    <li><strong>Scheduled:</strong> Election is visible to voters but voting is not yet open.</li>
+                    <li><strong>Live:</strong> Election is active and voters can cast their votes.</li>
+                    <li><strong>Ended:</strong> Election is closed and no more votes can be cast.</li>
+                  </ul>
+                </div>
               </>
             )}
             {activeTab === 'delete' && (

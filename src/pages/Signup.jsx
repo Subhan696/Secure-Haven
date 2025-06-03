@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
 import './Signup.css';
 
 function PasswordStrengthMeter({ password }) {
@@ -83,54 +84,55 @@ const Signup = () => {
     }
   }, [loadingProgress, isLoading]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    try {
+      // Validate passwords match
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      // Validate password strength (basic frontend validation)
+      // Note: The backend will do more thorough validation
+      if (formData.password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+
+      // Register user with backend API
+      const response = await api.post('/users/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: 'admin' // Set role to admin for users who sign up through the portal
+      });
+      
+      // If registration returns a token (auto-login), use it
+      if (response.data && response.data.token) {
+        // Import AuthContext and use login function if needed
+        // login(response.data.token);
+        // navigate('/dashboard');
+        
+        // For now, just redirect to login
+        navigate('/login', { 
+          state: { message: 'Registration successful! You can now log in.' } 
+        });
+      } else {
+        // Otherwise just redirect to login
+        navigate('/login', { 
+          state: { message: 'Registration successful! You can now log in.' } 
+        });
+      }
+    } catch (err) {
+      // Use our improved error handling from the API utility
+      setError(err.message || 'Registration failed');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Validate password strength
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
-    // Check if email already exists
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (users.some(user => user.email === formData.email)) {
-      setError('Email already in use');
-      setIsLoading(false);
-      return;
-    }
-
-    // Create new user
-    const newUser = {
-      id: Date.now(),
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: 'admin'
-    };
-
-    // Save to localStorage
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    // Set current user and redirect after loading animation completes
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
-    localStorage.setItem('userEmail', newUser.email);
-    
-    // Navigation will happen after progress bar completes
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 1000);
   };
+
 
   return (
     <>

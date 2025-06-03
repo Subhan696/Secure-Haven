@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './Header.css';
 
 const DashboardHeader = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
-  const userEmail = localStorage.getItem('userEmail');
+  const { currentUser, logout } = useContext(AuthContext);
 
   const handleLogout = () => {
-    localStorage.removeItem('userEmail');
+    logout();
     navigate('/login');
   };
 
@@ -18,10 +19,10 @@ const DashboardHeader = () => {
       <nav className="header-nav">
         <Link to="/dashboard" className="header-link">Dashboard</Link>
       </nav>
-      {userEmail && (
+      {currentUser && (
         <div className="header-user" onClick={() => setDropdownOpen(!dropdownOpen)}>
-          <span className="header-user-icon">📧</span>
-          <span className="header-username">{userEmail.split('@')[0]}</span>
+          <span className="header-user-icon">👤</span>
+          <span className="header-username">{currentUser.name || currentUser.email.split('@')[0]}</span>
           {dropdownOpen && (
             <div className="header-dropdown">
               <button onClick={() => { setDropdownOpen(false); navigate('/dashboard/account-settings'); }}>Account Settings</button>

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VoterHeader from '../components/VoterHeader';
+import { AuthContext } from '../context/AuthContext';
+import api from '../utils/api';
 import './ElectionVoters';
 
 const VoterElection = () => {
@@ -15,59 +17,62 @@ const VoterElection = () => {
   const [isElectionLive, setIsElectionLive] = useState(false);
   const [success, setSuccess] = useState(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const found = JSON.parse(stored).find(e => String(e.id) === String(electionId));
-      if (found) {
-        // Check election status
-        const now = new Date();
-        const startDate = new Date(found.startDate);
-        const endDate = new Date(found.endDate);
-        
-        const isLive = now >= startDate && now <= endDate;
-        const ended = now > endDate;
-        const upcoming = now < startDate;
-        
-        // Update election status
-        let status = found.status;
-        if (ended && found.status === 'Live') {
-          status = 'Ended';
-        } else if (isLive && found.status === 'Upcoming') {
-          status = 'Live';
-        }
-        
-        if (status !== found.status) {
-          const elections = JSON.parse(stored);
-          const updatedElections = elections.map(e => 
-            String(e.id) === String(electionId) ? { ...e, status } : e
-          );
-          localStorage.setItem('elections', JSON.stringify(updatedElections));
-          found.status = status;
-        }
-        
-        setElection(found);
-        setIsElectionEnded(ended);
-        setIsElectionLive(isLive);
-        
-        // Initialize selected options
-        const initialOptions = {};
-        found.questions?.forEach((_, index) => {
-          initialOptions[index] = null;
-        });
-        setSelectedOptions(initialOptions);
+  const { currentUser } = useContext(AuthContext);
 
-        // Check if current user has voted
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (currentUser && found.votes) {
-          const userVotes = found.votes.filter(vote => vote.voterEmail === currentUser.email);
-          setHasVoted(userVotes.length > 0);
+  useEffect(() => {
+    // Fetch election data from backend API
+    const fetchElection = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/elections/${electionId}`);
+        
+        if (response.data) {
+          const election = response.data;
+          setElection(election);
+          
+          // Check election status based on dates
+          const now = new Date();
+          const startDate = new Date(election.startDate);
+          const endDate = new Date(election.endDate);
+          
+          const isLive = now >= startDate && now <= endDate;
+          const ended = now > endDate;
+          
+          setIsElectionEnded(ended);
+          setIsElectionLive(isLive);
+          
+          // Initialize selected options
+          const initialOptions = {};
+          election.questions?.forEach((_, index) => {
+            initialOptions[index] = null;
+          });
+          setSelectedOptions(initialOptions);
+
+          // Check if current user has voted
+          if (currentUser) {
+            try {
+              const votesResponse = await api.get(`/votes/check/${electionId}`);
+              setHasVoted(votesResponse.data.hasVoted);
+            } catch (err) {
+              console.error('Error checking if user has voted:', err);
+              // Default to not voted if there's an error
+              setHasVoted(false);
+            }
+          }
+          
+          setError(null);
+        } else {
+          setError('Election not found');
         }
-      } else {
-        setError('Election not found');
+      } catch (err) {
+        console.error('Error fetching election:', err);
+        setError(err.response?.data?.message || 'Failed to load election details');
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    fetchElection();
   }, [electionId]);
 
   const handleOptionSelect = (questionIndex, optionIndex) => {
@@ -79,8 +84,8 @@ const VoterElection = () => {
     }));
   };
 
-  const handleVote = () => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const handleVote = async () => {
+    // Check if user is authenticated
     if (!currentUser) {
       navigate('/login');
       return;
@@ -110,69 +115,62 @@ const VoterElection = () => {
     }
 
     // Check if all questions are answered
-    const allQuestionsAnswered = election.questions.every((_, index) => 
-      selectedOptions[index] !== undefined
+    const unansweredQuestions = Object.keys(selectedOptions).filter(
+      questionIndex => selectedOptions[questionIndex] === null
     );
 
-    if (!allQuestionsAnswered) {
+    if (unansweredQuestions.length > 0) {
       setError('Please answer all questions before submitting your vote');
       return;
     }
 
-    // Create vote objects
-    const votes = Object.entries(selectedOptions).map(([questionIndex, optionIndex]) => ({
-      questionIndex: parseInt(questionIndex),
-      optionIndex: parseInt(optionIndex),
-      voterEmail: currentUser.email,
-      timestamp: new Date().toISOString()
-    }));
-
-    // Update election with new votes
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const elections = JSON.parse(stored);
-      const updatedElections = elections.map(e => {
-        if (String(e.id) === String(electionId)) {
-          return {
-            ...e,
-            votes: [...(e.votes || []), ...votes]
-          };
-        }
-        return e;
-      });
-      localStorage.setItem('elections', JSON.stringify(updatedElections));
-      
-      // Update voting history
-      const votingHistory = JSON.parse(localStorage.getItem('votingHistory') || '[]');
-      const newVote = {
-        electionId: election.id,
-        voterEmail: currentUser.email,
-        selectedOptions: votes,
-        timestamp: new Date().toISOString()
+    try {
+      // Prepare vote data
+      const voteData = {
+        electionId: election._id,
+        votes: Object.entries(selectedOptions).map(([questionIndex, optionIndex]) => ({
+          questionIndex: parseInt(questionIndex),
+          optionIndex: parseInt(optionIndex)
+        }))
       };
-      votingHistory.push(newVote);
-      localStorage.setItem('votingHistory', JSON.stringify(votingHistory));
 
-      setElection(prev => ({
-        ...prev,
-        votes: [...(prev.votes || []), ...votes]
-      }));
-      setHasVoted(true);
-      setSuccess('Your vote has been recorded successfully!');
-      setTimeout(() => {
-        navigate('/voter-dashboard');
-      }, 2000);
+      // Send vote to backend API
+      const response = await api.post('/votes', voteData);
+      
+      if (response.data) {
+        setSuccess('Your vote has been submitted successfully!');
+        setHasVoted(true);
+        setError(null);
+        
+        // Refresh election data to get updated vote counts
+        try {
+          const refreshResponse = await api.get(`/elections/${electionId}`);
+          if (refreshResponse.data) {
+            setElection(refreshResponse.data);
+          }
+        } catch (refreshErr) {
+          console.error('Error refreshing election data:', refreshErr);
+          // Not critical, so we don't show an error to the user
+        }
+        
+        // After voting, redirect to dashboard after a short delay
+        setTimeout(() => {
+          navigate('/voter-dashboard');
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Error submitting vote:', err);
+      setError(err.response?.data?.message || 'Failed to submit your vote. Please try again.');
     }
   };
 
   const handleClearAll = () => {
-    if (isElectionEnded || hasVoted || !isElectionLive) return;
-    
-    const clearedOptions = {};
-    election.questions?.forEach((_, index) => {
-      clearedOptions[index] = null;
+    // Reset all selected options to null
+    const resetOptions = {};
+    Object.keys(selectedOptions).forEach(key => {
+      resetOptions[key] = null;
     });
-    setSelectedOptions(clearedOptions);
+    setSelectedOptions(resetOptions);
   };
 
   if (loading) {

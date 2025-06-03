@@ -17,8 +17,16 @@ export const generateVoterKey = (email) => {
   // Create a hash of the email + salt
   const hash = hashString(email + salt);
   
-  // Take first 8 characters for a shorter key
-  return hash.substring(0, 8);
+  // Take first 8 characters and ensure it's padded to 8 characters
+  // This is critical for consistent key generation
+  let key = hash.substring(0, 8);
+  
+  // Pad with zeros if less than 8 characters
+  while (key.length < 8) {
+    key = '0' + key;
+  }
+  
+  return key;
 };
 
 // Function to get or create voter key

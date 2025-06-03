@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ElectionSidebar from '../components/ElectionSidebar';
+import api from '../utils/api';
 import './ElectionBallot.css';
 
 const ElectionBallot = () => {
@@ -15,38 +16,35 @@ const ElectionBallot = () => {
   const [editOptions, setEditOptions] = useState(['']);
   const [error, setError] = useState('');
 
+  const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const found = JSON.parse(stored).find(e => String(e.id) === String(id));
-      if (found) {
-        // Dynamically recalculate status
-        const now = new Date();
-        const startDate = new Date(found.startDate);
-        const endDate = new Date(found.endDate);
-        let status = found.status;
-        if (found.launched) {
-          if (now > endDate) {
-            status = 'Ended';
-          } else if (now >= startDate && now <= endDate) {
-            status = 'Live';
-          } else if (now < startDate) {
-            status = 'Upcoming';
-          }
+    // Fetch election data from backend API
+    const fetchElection = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/elections/${id}`);
+        
+        if (response.data) {
+          setElection(response.data);
+          setQuestions(response.data.questions || []);
+          setError('');
         } else {
-          if (now > endDate) {
-            status = 'Draft'; // not launched, ended
-          } else {
-            status = 'Draft';
-          }
+          setElection(null);
+          setQuestions([]);
+          setError('Election not found');
         }
-        found.status = status;
-        setElection(found);
-        setQuestions(found && found.questions ? found.questions : []);
-      } else {
+      } catch (err) {
+        console.error('Error fetching election:', err);
         setElection(null);
+        setQuestions([]);
+        setError(err.response?.data?.message || 'Failed to load election details');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchElection();
   }, [id]);
 
   const handleAddOption = () => setNewOptions(opts => [...opts, '']);
@@ -102,14 +100,22 @@ const ElectionBallot = () => {
     updateElection({ questions: updated });
   };
 
-  function updateElection(fields) {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const arr = JSON.parse(stored).map(e =>
-        String(e.id) === String(id) ? { ...e, ...fields } : e
-      );
-      localStorage.setItem('elections', JSON.stringify(arr));
-      setElection(arr.find(e => String(e.id) === String(id)));
+  async function updateElection(fields) {
+    try {
+      setLoading(true);
+      // Send request to backend API to update election
+      const response = await api.put(`/elections/${id}`, fields);
+      
+      if (response.data) {
+        // Update the election state to reflect the changes
+        setElection(response.data);
+        setError('');
+      }
+    } catch (err) {
+      console.error('Error updating election:', err);
+      setError(err.response?.data?.message || 'Failed to update election. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -121,16 +127,25 @@ const ElectionBallot = () => {
   const endDate = new Date(election.endDate);
   const isLive = election.launched && now >= startDate && now <= endDate;
 
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading election details...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="election-details-layout">
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <div className="election-details-main election-content-animated">
+      <div className="election-details-main">
         <div className="sidebar-header-row">
-  <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
-    &#9776;
-  </button>
-  <h2 className="ballot-title">Ballot</h2>
-</div>
+          <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
+            &#9776;
+          </button>
+          <h2 className="ballot-title">Ballot</h2>
+        </div>
         {election && election.status === 'Ended' ? (
           <div className="ballot-closed-msg">
             This election has ended. Ballot editing is no longer allowed.

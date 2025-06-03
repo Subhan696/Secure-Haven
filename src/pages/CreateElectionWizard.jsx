@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getVoterKey } from '../utils/voterKey';
+import { AuthContext } from '../context/AuthContext';
+import api from '../utils/api';
 import './CreateElectionWizard.css';
 
 const steps = [
@@ -231,36 +233,78 @@ function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
 function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
   const [voters, setVoters] = useState(data.voters || []);
   const [newVoter, setNewVoter] = useState('');
+  const [error, setError] = useState('');
 
   const handleAddVoter = (e) => {
     e.preventDefault();
+    setError('');
     if (!newVoter.trim()) return;
 
-    const email = newVoter.trim().toLowerCase();
-    if (voters.some(v => v.email === email)) {
-      alert('This voter is already added.');
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newVoter)) {
+      setError('Please enter a valid email address');
       return;
     }
 
-    // Generate or get existing voter key
-    const voterKey = getVoterKey(email);
-    
-    const updated = [...voters, { email, name: email.split('@')[0], key: voterKey }];
-    setVoters(updated);
-    setNewVoter('');
-    setData(prev => ({ ...prev, voters: updated }));
+    // Check for duplicates
+    if (voters.some(voter => typeof voter === 'string' ? voter === newVoter : voter.email === newVoter)) {
+      setError('This email is already added');
+      return;
+    }
+
+    try {
+      // Generate a consistent voter key based on email
+      const voterKey = getVoterKey(newVoter);
+      
+      // Create a proper voter object
+      const voterObj = {
+        name: newVoter.split('@')[0], // Use part before @ as name
+        email: newVoter,
+        voterKey: voterKey // Use consistent key generation
+      };
+
+      const updated = [...voters, voterObj];
+      setVoters(updated);
+      setData(prev => ({ ...prev, voters: updated }));
+      setNewVoter('');
+      console.log('Voter added:', voterObj);
+      console.log('Updated voters list:', updated);
+    } catch (err) {
+      console.error('Error adding voter:', err);
+      setError('Failed to add voter. Please try again.');
+    }
   };
 
   const handleRemoveVoter = (email) => {
-    const updated = voters.filter(v => v.email !== email);
-    setVoters(updated);
-    setData(prev => ({ ...prev, voters: updated }));
+    try {
+      // Create a new array without the voter to be removed
+      const updated = voters.filter(voter => {
+        if (typeof voter === 'string') {
+          return voter !== email;
+        }
+        return voter.email !== email;
+      });
+      
+      // Update both the local state and the parent component's state
+      setVoters(updated);
+      setData(prev => ({ ...prev, voters: updated }));
+      console.log('Voter removed. Updated voters list:', updated);
+    } catch (err) {
+      console.error('Error removing voter:', err);
+      setError('Failed to remove voter. Please try again.');
+    }
   };
 
   return (
     <div className="wizard-form">
       <div className="add-voter-section">
         <h3>Add Voters</h3>
+        {error && (
+          <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+            {error}
+          </div>
+        )}
         <form onSubmit={handleAddVoter} className="form-group">
           <input
             type="email"
@@ -286,6 +330,9 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
               <div key={idx} className="voter-card">
                 <div className="voter-info">
                   <div className="voter-email">{voter.email}</div>
+                  <div className="voter-key">
+                    <strong>Key:</strong> {voter.voterKey || 'N/A'}
+                  </div>
                 </div>
                 <div className="voter-actions">
                   <button
@@ -311,10 +358,16 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
   );
 }
 
-function ReviewSave({ onSave, onBack, onCancel, data }) {
+function ReviewSave({ onSave, onBack, onCancel, data, isSaving, error }) {
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <h3 style={{ marginBottom: 24 }}>Review Election Details</h3>
+    <div style={{ padding: 24 }}>
+      <h2 style={{ marginBottom: 24 }}>Review & Save</h2>
+      
+      {error && (
+        <div style={{ background: '#f8d7da', color: '#721c24', padding: '12px 16px', borderRadius: 4, marginBottom: 24 }}>
+          {error}
+        </div>
+      )}
       
       <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
@@ -350,9 +403,30 @@ function ReviewSave({ onSave, onBack, onCancel, data }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
-        <button type="button" onClick={onCancel} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Cancel</button>
-        <button type="button" onClick={onBack} style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Back</button>
-        <button type="button" onClick={onSave} style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>Save Election</button>
+        <button 
+          type="button" 
+          onClick={onCancel} 
+          disabled={isSaving}
+          style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
+        >
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          onClick={onBack} 
+          disabled={isSaving}
+          style={{ background: '#95a5a6', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 1.5rem', fontWeight: 500, fontSize: 16, cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
+        >
+          Back
+        </button>
+        <button 
+          type="button" 
+          onClick={onSave} 
+          disabled={isSaving}
+          style={{ background: '#3498db', color: '#fff', border: 'none', borderRadius: 4, padding: '0.7rem 2.2rem', fontWeight: 500, fontSize: 16, cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
+        >
+          {isSaving ? 'Saving...' : 'Save Election'}
+        </button>
       </div>
     </div>
   );
@@ -370,32 +444,70 @@ const CreateElectionWizard = () => {
   const handleNext = () => setStep(s => s + 1);
   const handleBack = () => setStep(s => s - 1);
 
-  const handleSave = () => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const { currentUser } = useContext(AuthContext);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
     if (!currentUser) {
       navigate('/login');
       return;
     }
 
-    // Set election status to Draft by default
-    // Elections will only become Live when manually launched from the ElectionLaunch page
-    const status = 'Draft';
-
-    // Save election to localStorage
-    const elections = JSON.parse(localStorage.getItem('elections') || '[]');
-    const newElection = {
-      ...wizardData,
-      id: Date.now(),
-      status: status,
-      createdBy: currentUser.email,
-      createdAt: new Date().toISOString(),
-      totalVoters: wizardData.voters ? wizardData.voters.length : 0,
-      totalVotes: 0,
-      description: wizardData.description || '',
-    };
-    elections.push(newElection);
-    localStorage.setItem('elections', JSON.stringify(elections));
-    navigate('/dashboard');
+    try {
+      setIsSaving(true);
+      setError('');
+      
+      // Log the current user for debugging
+      console.log('Current user:', currentUser);
+      console.log('Wizard data:', wizardData);
+      
+      // Process voters to ensure they have the correct format
+      const processedVoters = wizardData.voters ? wizardData.voters.map(voter => {
+        // If voter is already in the correct format, return it as is
+        if (voter && typeof voter === 'object' && voter.name && voter.email) {
+          return voter;
+        }
+        // If voter is just an email string, create a proper voter object
+        if (typeof voter === 'string') {
+          return {
+            name: voter.split('@')[0], // Use part before @ as name
+            email: voter
+            // The backend will generate a consistent voterKey
+          };
+        }
+        return null;
+      }).filter(Boolean) : [];
+      
+      // Prepare election data for API
+      const electionData = {
+        title: wizardData.title,
+        description: wizardData.description || '',
+        startDate: wizardData.startDate,
+        endDate: wizardData.endDate,
+        timezone: wizardData.timezone || 'Asia/Karachi',
+        status: 'draft', // Elections will only become active when manually launched
+        questions: wizardData.questions || [],
+        voters: processedVoters
+      };
+      
+      console.log('Sending election data to API:', electionData);
+      
+      // Send request to backend API to create the election
+      const response = await api.post('/elections', electionData);
+      
+      console.log('API response:', response.data);
+      
+      if (response.data) {
+        // Navigate to dashboard after successful creation
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      console.error('Error creating election:', err);
+      setError(err.response?.data?.message || 'Failed to create election. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -404,7 +516,7 @@ const CreateElectionWizard = () => {
       {step === 0 && <BasicInfoForm onNext={handleNext} onCancel={handleCancel} data={wizardData} setData={setWizardData} />}
       {step === 1 && <BallotBuilder onNext={handleNext} onBack={handleBack} onCancel={handleCancel} data={wizardData} setData={setWizardData} />}
       {step === 2 && <VoterManagement onNext={handleNext} onBack={handleBack} onCancel={handleCancel} data={wizardData} setData={setWizardData} />}
-      {step === 3 && <ReviewSave onSave={handleSave} onBack={handleBack} onCancel={handleCancel} data={wizardData} />}
+      {step === 3 && <ReviewSave onSave={handleSave} onBack={handleBack} onCancel={handleCancel} data={wizardData} isSaving={isSaving} error={error} />}
     </div>
   );
 };

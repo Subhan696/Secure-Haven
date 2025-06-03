@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
+import { AuthContext } from '../context/AuthContext';
 import './Login.css';
 
 function PasswordStrengthMeter({ password }) {
@@ -26,6 +28,7 @@ function PasswordStrengthMeter({ password }) {
 }
 
 const Login = () => {
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const [loginType, setLoginType] = useState('admin'); // 'admin' or 'voter'
   const [formData, setFormData] = useState({
@@ -36,6 +39,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [userInfo, setUserInfo] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,57 +87,68 @@ const Login = () => {
     }
   }, [loadingProgress, isLoading]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    if (loginType === 'admin') {
-      // Admin login
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => u.email === formData.email && u.password === formData.password);
-
-      if (!user) {
-        setError('Invalid email or password');
-        setIsLoading(false);
-        return;
+    try {
+      if (loginType === 'admin') {
+        // Admin login using backend API
+        const res = await api.post('/users/login', {
+          email: formData.email,
+          password: formData.password
+        });
+        
+        // Store token and user info
+        if (res.data.token) {
+          login(res.data.token);
+          setUserInfo(res.data.user);
+          
+          // Log user information for debugging
+          console.log('User role from API:', res.data.user.role);
+          
+          // Use the role-based redirect component
+          console.log('Redirecting to role-based redirect component');
+          setTimeout(() => navigate('/redirect'), 250);
+        } else {
+          setError('No token received from backend.');
+        }
+      } else {
+        // Voter login using email and voter key
+        try {
+          const res = await api.post('/votes/login', {
+            email: formData.email,
+            voterKey: formData.voterKey
+          });
+          
+          if (res.data.token) {
+            // Store token and voter info
+            login(res.data.token);
+            setUserInfo({
+              role: 'voter',
+              email: formData.email,
+              electionId: res.data.electionId
+            });
+            
+            // Redirect to voter election page
+            setTimeout(() => navigate(`/voter-election/${res.data.electionId}`), 250);
+          } else {
+            setError('Invalid voter credentials. Please check your email and voter key.');
+          }
+        } catch (err) {
+          console.error('Voter login error:', err);
+          setError('Invalid voter credentials or the election is not currently active.');
+        }
       }
-
-      // Set current user
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      localStorage.setItem('userEmail', user.email);
-      
-      // Navigation will happen after progress bar completes
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
-    } else {
-      // Voter login
-      const elections = JSON.parse(localStorage.getItem('elections') || '[]');
-      const election = elections.find(election => 
-        election.voters.some(voter => 
-          voter.email === formData.email && voter.key === formData.voterKey
-        )
-      );
-
-      if (!election || !election.voters.find(voter => voter.email === formData.email && voter.key === formData.voterKey)) {
-        setError('Invalid voter credentials');
-        setIsLoading(false);
-        return;
-      }
-
-      // Set voter session
-      const voter = election.voters.find(v => v.email === formData.email);
-      const voterUser = { email: voter.email, role: 'voter' };
-      localStorage.setItem('currentUser', JSON.stringify(voterUser));
-      localStorage.setItem('userEmail', voter.email);
-      
-      // Navigation will happen after progress bar completes
-      setTimeout(() => {
-        navigate('/voter-dashboard');
-      }, 1000);
+    } catch (err) {
+      // Use the error handling from our updated API utility
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   return (
     <>

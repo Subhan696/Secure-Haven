@@ -19,10 +19,21 @@ const Reviews = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
+    api.get('/reviews')
+      .then(res => setReviews(res.data))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
     // Simulate loading
     const timer = setTimeout(() => {
-      const stored = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
-      setReviews([...reviewsData, ...stored]);
+      const stored = localStorage.getItem(LOCAL_KEY);
+      if (stored) {
+        setReviews([...reviewsData, ...JSON.parse(stored)]);
+      } else {
+        setReviews(reviewsData);
+      }
       setIsLoading(false);
     }, 500);
     
@@ -81,7 +92,10 @@ const Reviews = () => {
     const userReviews = updatedReviews.filter(
       r => !reviewsData.some(d => d.text === r.text && d.author === r.author)
     );
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(userReviews));
+    api.post('/reviews', form)
+  .then(() => setSuccess('Thank you for your review!'))
+  .catch(() => setSuccess('Failed to submit review.'));
+setForm({ text: '', stars: 5, author: '', email: '' });
     
     setForm({ text: '', stars: 5, author: '', email: '' });
     setSuccess('Thank you for your review!');

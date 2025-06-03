@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VoterHeader from '../components/VoterHeader';
+import api from '../utils/api';
 
 const VoterElectionResults = () => {
   const { electionId } = useParams();
@@ -8,19 +9,64 @@ const VoterElectionResults = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    const elections = JSON.parse(localStorage.getItem('elections') || '[]');
-    const found = elections.find(e => e.id === electionId);
-    setElection(found);
-    setLoading(false);
+    const fetchElection = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/elections/${electionId}`);
+        
+        if (response.data) {
+          setElection(response.data);
+          setError(null);
+        } else {
+          setElection(null);
+          setError('Election not found');
+        }
+      } catch (err) {
+        console.error('Error fetching election:', err);
+        setElection(null);
+        setError(err.response?.data?.message || 'Failed to load election details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchElection();
   }, [electionId]);
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading election results...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <div className="error-icon">⚠️</div>
+        <p className="error-message">{error}</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
   }
 
   if (!election) {
-    return <div className="no-elections">Election not found.</div>;
+    return (
+      <div className="not-found-container">
+        <div className="not-found-icon">🔍</div>
+        <p className="not-found-message">Election not found</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
   }
 
   return (

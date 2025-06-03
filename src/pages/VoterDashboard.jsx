@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VoterHeader from '../components/VoterHeader';
+import { AuthContext } from '../context/AuthContext';
+import api from '../utils/api';
 import './VoterDashboard.css';
 
 const VoterDashboard = () => {
@@ -8,51 +10,52 @@ const VoterDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
+  const { currentUser } = useContext(AuthContext);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [votingHistory, setVotingHistory] = useState([]);
+
   useEffect(() => {
-    // Get current user from localStorage
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (!currentUser || currentUser.role !== 'voter') {
+    // Check if user is authenticated and has voter role
+    if (!currentUser) {
       navigate('/login');
       return;
     }
 
-    const voterEmail = currentUser.email;
+    const fetchElections = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch available elections for the voter
+        const electionsResponse = await api.get('/elections/available');
+        
+        // Fetch voting history to check which elections the voter has already voted in
+        const votingHistoryResponse = await api.get('/votes/me/history');
+        setVotingHistory(votingHistoryResponse.data || []);
+        
+        // Mark elections that the voter has already voted in
+        const voterElections = electionsResponse.data.map(election => {
+          // Check if the voter has already voted in this election
+          const hasVoted = votingHistoryResponse.data.some(vote => 
+            vote.election?._id === election._id
+          );
+          
+          // Add hasVoted flag to the election object
+          return { ...election, hasVoted };
+        });
+        
+        setAllElections(voterElections);
+        setError('');
+      } catch (err) {
+        console.error('Error fetching elections:', err);
+        setError(err.response?.data?.message || 'Failed to load available elections');
+        setAllElections([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Get all elections
-    const allElections = JSON.parse(localStorage.getItem('elections') || '[]');
-    
-    // Get voting history to check which elections the voter has already voted in
-    const votingHistory = JSON.parse(localStorage.getItem('votingHistory') || '[]');
-    
-    // Filter elections that are:
-    // 1. Live (current time is between start and end dates)
-    // 2. Actually launched (has the launched flag set to true)
-    // 3. Has status explicitly set to 'Live'
-    // 4. Include the current voter in their voters list
-    const voterElections = allElections.filter(election => {
-      const now = new Date();
-      const startDate = new Date(election.startDate);
-      const endDate = new Date(election.endDate);
-      
-      // Check if election is truly live
-      const isTimeInRange = now >= startDate && now <= endDate;
-      const isLaunched = election.launched === true;
-      const hasLiveStatus = election.status === 'Live';
-      const isVoterIncluded = election.voters?.some(voter => voter.email === voterEmail);
-      
-      // Only show elections that are truly live and include this voter
-      return isTimeInRange && isLaunched && hasLiveStatus && isVoterIncluded;
-    }).map(election => {
-      // Check if the voter has already voted in this election
-      const hasVoted = votingHistory.some(vote => 
-        vote.electionId === election.id && vote.voterEmail === voterEmail
-      );
-      
-      // Add hasVoted flag to the election object
-      return { ...election, hasVoted };
-    });
-
-    setAllElections(voterElections);
+    fetchElections();
   }, [navigate]);
 
   const handleSearch = (e) => {
@@ -65,10 +68,24 @@ const VoterDashboard = () => {
   );
 
   const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('userEmail');
-    navigate('/login');
+    // Clear user session from AuthContext
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // Force a page refresh to reset all application state
+    window.location.href = '/login';
   };
+
+  if (loading) {
+    return (
+      <div className="voter-dashboard-container">
+        <VoterHeader />
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading available elections...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="voter-dashboard-container">
@@ -84,6 +101,12 @@ const VoterDashboard = () => {
           />
         </div>
 
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
         <div className="voter-dashboard-list">
           {filteredElections.length === 0 ? (
             <div className="no-elections">
@@ -91,7 +114,7 @@ const VoterDashboard = () => {
             </div>
           ) : (
             filteredElections.map(election => (
-              <div key={election.id} className="election-card">
+              <div key={election._id} className="election-card">
                 <div className="election-card-header">
                   <h3>{election.title}</h3>
                   <span className="election-status live">Live</span>
@@ -103,7 +126,7 @@ const VoterDashboard = () => {
                 </div>
                 <div className="election-card-actions">
                   <button 
-                    onClick={() => navigate(`/voter-election/${election.id}`)}
+                    onClick={() => navigate(`/voter-election/${election._id}`)}
                     className={`vote-btn ${election.hasVoted ? 'voted' : ''}`}
                   >
                     {election.hasVoted ? 'Voted' : 'Vote Now'}

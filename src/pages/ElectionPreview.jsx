@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import ElectionSidebar from '../components/ElectionSidebar';
+import api from '../utils/api';
 import './ElectionPreview.css';
 
 const ElectionPreview = () => {
@@ -9,21 +10,42 @@ const ElectionPreview = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState({});
 
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
-    const stored = localStorage.getItem('elections');
-    if (stored) {
-      const found = JSON.parse(stored).find(e => String(e.id) === String(id));
-      setElection(found);
-      // Initialize selected options for each question
-      if (found && found.questions) {
-        const initialSelections = {};
-        found.questions.forEach((_, index) => {
-          initialSelections[index] = null;
-        });
-        setSelectedOptions(initialSelections);
+    const fetchElection = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/elections/${id}`);
+        
+        if (response.data) {
+          setElection(response.data);
+          // Initialize selected options for each question
+          if (response.data.questions) {
+            const initialSelections = {};
+            response.data.questions.forEach((_, index) => {
+              initialSelections[index] = null;
+            });
+            setSelectedOptions(initialSelections);
+          }
+          setError('');
+        } else {
+          setElection(null);
+          setError('Election not found');
+        }
+      } catch (err) {
+        console.error('Error fetching election:', err);
+        setElection(null);
+        setError(err.response?.data?.message || 'Failed to load election details');
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [id]);
+    };
+
+    fetchElection();
+  }, [id, navigate]);
 
   const handleOptionSelect = (questionIndex, optionIndex) => {
     setSelectedOptions(prev => ({
@@ -32,8 +54,37 @@ const ElectionPreview = () => {
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading election details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <div className="error-icon">⚠️</div>
+        <p className="error-message">{error}</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
   if (!election) {
-    return <div>Loading...</div>;
+    return (
+      <div className="not-found-container">
+        <div className="not-found-icon">🔍</div>
+        <p className="not-found-message">Election not found</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
   }
 
   return (

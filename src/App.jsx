@@ -1,5 +1,6 @@
 // src/App.jsx
 import React from 'react';
+import { AuthProvider } from './context/AuthContext.jsx';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -48,6 +49,7 @@ import './App.css';
 
 // Import the standalone ScrollToTop component
 import ScrollToTop from './components/ScrollToTop';
+import RoleBasedRedirect from './components/RoleBasedRedirect';
 
 // Layout for public pages (includes header/footer)
 const PublicLayout = () => (
@@ -109,7 +111,8 @@ const router = createBrowserRouter([
       { path: '/reset-password', element: withScrollReset(ResetPassword) },
       { path: '/reviews', element: withScrollReset(Reviews) },
       { path: '/user-guide', element: withScrollReset(UserGuide) },
-      { path: '/privacy-policy', element: withScrollReset(PrivacyPolicy) }
+      { path: '/privacy-policy', element: withScrollReset(PrivacyPolicy) },
+      { path: '/redirect', element: <RoleBasedRedirect /> }
     ]
   },
   {
@@ -167,13 +170,13 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <>
+    <AuthProvider>
       <RouterProvider
         router={router}
         future={{ v7_startTransition: true }}
         fallbackElement={<div>Loading...</div>}
       />
-    </>
+    </AuthProvider>
   );
 }
 

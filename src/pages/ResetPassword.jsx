@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../utils/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './ResetPassword.css';
 
@@ -23,80 +24,37 @@ const ResetPassword = () => {
     setLoading(true);
     setMessage('');
 
-    try {
-      // Validate passwords match
-      if (newPassword !== confirmPassword) {
-        setMessage('Passwords do not match');
-        setLoading(false);
-        return;
-      }
-
-      // Validate password length
-      if (newPassword.length < 8) {
-        setMessage('Password must be at least 8 characters long');
-        setLoading(false);
-        return;
-      }
-
-      // Get reset request
-      const resetRequests = JSON.parse(localStorage.getItem('resetRequests') || '{}');
-      const resetRequest = resetRequests[email];
-
-      if (!resetRequest) {
-        setMessage('Invalid or expired reset request');
-        setLoading(false);
-        return;
-      }
-
-      // Check if code is expired
-      if (new Date() > new Date(resetRequest.expires)) {
-        setMessage('Verification code has expired');
-        setLoading(false);
-        return;
-      }
-
-      // Check if code matches
-      if (resetRequest.verificationCode !== verificationCode) {
-        resetRequest.attempts++;
-        localStorage.setItem('resetRequests', JSON.stringify(resetRequests));
-        
-        if (resetRequest.attempts >= 3) {
-          setMessage('Too many failed attempts. Please request a new code.');
-          setLoading(false);
-          return;
-        }
-        
-        setMessage('Invalid verification code');
-        setLoading(false);
-        return;
-      }
-
-      // Update password
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const userIndex = users.findIndex(u => u.email === email);
-      
-      if (userIndex === -1) {
-        setMessage('User not found');
-        setLoading(false);
-        return;
-      }
-
-      users[userIndex].password = newPassword;
-      localStorage.setItem('users', JSON.stringify(users));
-
-      // Remove reset request
-      delete resetRequests[email];
-      localStorage.setItem('resetRequests', JSON.stringify(resetRequests));
-
-      setMessage('Password reset successful!');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (error) {
-      setMessage('An error occurred. Please try again.');
-    } finally {
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      setMessage('Passwords do not match');
       setLoading(false);
+      return;
     }
+
+    // Validate password length
+    if (newPassword.length < 8) {
+      setMessage('Password must be at least 8 characters long');
+      setLoading(false);
+      return;
+    }
+
+    api.post('/password-reset/reset', {
+      email,
+      verificationCode,
+      newPassword
+    })
+      .then(() => {
+        setMessage('Password reset successful!');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      })
+      .catch((error) => {
+        setMessage(
+          error.response?.data?.message || 'Invalid or expired verification code.'
+        );
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
