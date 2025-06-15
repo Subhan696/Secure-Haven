@@ -1,11 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import reviews from '../data/reviewsData';
+import api from '../utils/api'; // Import api utility
 import image from "../assets/vote.jpg";
 import './Home.css';
 
 const Home = () => {
-  const featuredReviews = reviews.slice(0, 3); // show top 3 reviews
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [reviewsError, setReviewsError] = useState('');
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setLoadingReviews(true);
+        setReviewsError('');
+        // Fetch reviews from the backend, maybe limit to 3 or 5 here directly if API supports, or after fetch.
+        const response = await api.get('/reviews?limit=3'); // Fetching a limited number of reviews
+        setReviews(response.data.reviews || []);
+      } catch (err) {
+        console.error('Error fetching reviews for homepage:', err);
+        setReviewsError('Failed to load reviews. Please try again later.');
+        setReviews([]);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  // Helper for star rendering (can be moved to a component if reused much)
+  const StarRating = ({ rating }) => (
+    <div className="review-stars">
+      {[...Array(5)].map((_, i) => (
+        <span key={i} className={i < rating ? 'star selected' : 'star'}>★</span>
+      ))}
+      <span className="rating-number">{rating}.0</span>
+    </div>
+  );
+
+  const formatDate = (dateString) => {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
 
   return (
     <>
@@ -91,41 +128,36 @@ const Home = () => {
       {/* Reviews Preview Section */}
       <section className="reviews-section">
         <h3>What People Are Saying</h3>
-        <div className="review-list">
-          {featuredReviews.map((review, index) => (
-            <div className="review-card" key={index}>
-              <div className="review-header">
-                <div className="review-meta">
-                  <div className="review-stars">
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i} className={i < review.stars ? 'star selected' : 'star'}>★</span>
-                    ))}
-                    <span className="rating-number">{review.stars}.0</span>
+        {loadingReviews ? (
+          <div className="loading-spinner">Loading reviews...</div>
+        ) : reviewsError ? (
+          <div className="error-message">{reviewsError}</div>
+        ) : reviews.length === 0 ? (
+          <p className="no-reviews">No reviews yet. Be the first to share your experience!</p>
+        ) : (
+          <div className="review-list">
+            {reviews.map((review) => (
+              <div className="review-card" key={review._id}>
+                <div className="review-header">
+                  <div className="review-meta">
+                    <StarRating rating={review.rating} /> {/* Use review.rating */}
+                    {review.createdAt && (
+                      <time className="review-date" dateTime={review.createdAt}>
+                        {formatDate(review.createdAt)}
+                      </time>
+                    )}
                   </div>
-                  {review.date && (
-                    <time className="review-date" dateTime={review.date}>
-                      {new Date(review.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </time>
-                  )}
                 </div>
-                {review.isVerified && (
-                  <span className="verified-badge" title="Verified user">
-                    Verified
-                  </span>
-                )}
+                <p>"{review.comment}"</p> {/* Use review.comment */}
+                <footer className="review-footer">
+                  <div>
+                    <span className="review-author">{review.name || 'Anonymous'}</span> {/* Use review.name */}
+                  </div>
+                </footer>
               </div>
-              <p>{review.text}</p>
-              <footer className="review-footer">
-                <div>
-                  <span className="review-author">{review.author}</span>
-                  {review.role && (
-                    <span className="review-role">{review.role}</span>
-                  )}
-                </div>
-              </footer>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
         <p>
           <Link to="/reviews" className="btn view-all-reviews">
             View All Reviews

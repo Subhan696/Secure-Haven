@@ -146,16 +146,16 @@ router.post('/login', async (req, res) => {
     console.log('Voter found in election:', voterExists._id, 'with status:', voterExists.status);
     
     // Check if the election the voter belongs to is active/live
-    console.log('Checking election status:', voterExists.status);
+    // console.log('Checking election status:', voterExists.status);
     
-    // Accept multiple status values that indicate an active election
-    const activeStatuses = ['live', 'active', 'Live', 'Active'];
-    if (!activeStatuses.includes(voterExists.status)) {
-      console.log('Election is not active. Current status:', voterExists.status);
-      return res.status(401).json({ 
-        message: `The election is not currently active (status: ${voterExists.status}). Please try again when the election is live.` 
-      });
-    }
+    // // Accept multiple status values that indicate an active election
+    // const activeStatuses = ['live', 'active', 'Live', 'Active'];
+    // if (!activeStatuses.includes(voterExists.status)) {
+    //   console.log('Election is not active. Current status:', voterExists.status);
+    //   return res.status(401).json({
+    //     message: `The election is not currently active (status: ${voterExists.status}). Please try again when the election is live.`
+    //   });
+    // }
     
     console.log('Election is active and voter can log in')
     
@@ -163,13 +163,13 @@ router.post('/login', async (req, res) => {
     const election = voterExists;
     
     // Validate election timing
-    const now = new Date();
-    if (now < new Date(election.startDate)) {
-      return res.status(400).json({ message: 'Election has not started yet' });
-    }
-    if (now > new Date(election.endDate)) {
-      return res.status(400).json({ message: 'Election has ended' });
-    }
+    // const now = new Date();
+    // if (now < new Date(election.startDate)) {
+    //   return res.status(400).json({ message: 'Election has not started yet' });
+    // }
+    // if (now > new Date(election.endDate)) {
+    //   return res.status(400).json({ message: 'Election has ended' });
+    // }
     
     // Create a token for the voter
     const token = jwt.sign(
@@ -205,7 +205,7 @@ router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
     console.log('Received vote submission:', JSON.stringify(req.body, null, 2));
     console.log('Authenticated user:', req.user);
     
-    const { election: electionId, candidate } = req.body;
+    const { election: electionId, votes } = req.body;
     const voter = req.user.id; // Get voter ID from authenticated user
     
     // Validate input
@@ -214,9 +214,9 @@ router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
       return res.status(400).json({ message: 'Election ID is required' });
     }
     
-    if (!candidate) {
-      console.error('Missing candidate in request');
-      return res.status(400).json({ message: 'Candidate selection is required' });
+    if (!votes || !Array.isArray(votes) || votes.length === 0) {
+      console.error('Missing or invalid votes in request');
+      return res.status(400).json({ message: 'At least one vote is required' });
     }
     
     // Check if election exists
@@ -271,29 +271,26 @@ router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
       });
     }
     
-    // Check if the selected option exists in any of the questions
-    let isValidOption = false;
-    let questionWithOption = null;
+    // Validate each vote
+    for (const vote of votes) {
+      const { question: questionId, option: optionId } = vote;
     
-    // Check each question's options for the selected candidate
-    for (const question of election.questions || []) {
-      if (question.options && question.options.includes(candidate)) {
-        isValidOption = true;
-        questionWithOption = question;
-        break;
+      // Find the question
+      const question = election.questions.find(q => q._id.toString() === questionId);
+      if (!question) {
+        return res.status(400).json({ 
+          message: `Invalid question ID: ${questionId}` 
+        });
+      }
+      
+      // Find the option
+      const option = question.options.find(o => o._id.toString() === optionId);
+      if (!option) {
+      return res.status(400).json({ 
+          message: `Invalid option ID: ${optionId} for question: ${questionId}` 
+      });
       }
     }
-    
-    if (!isValidOption) {
-      console.error(`Invalid option selected: ${candidate}. Available options:`, 
-        election.questions?.map(q => q.options).flat() || []);
-      return res.status(400).json({ 
-        message: 'Invalid option selected. Please try again.' 
-      });
-    }
-    
-    // Use the selected option as is
-    const candidateName = candidate;
     
     // Find the voter in the election's voters list to get their ID
     console.log('Looking for voter in election.voters:', {
@@ -346,18 +343,11 @@ router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
       });
     }
     
-    console.log('Creating new vote with data:', {
-      election: electionId,
-      voter: voterInElection._id || voterInElection,
-      voterEmail: voterEmail,
-      candidate: candidateName
-    });
-    
     try {
       // Create new vote with proper voter identification
       const voteData = {
         election: electionId,
-        candidate: candidateName,
+        votes: votes,
         voterEmail: voterEmail
       };
       
@@ -385,20 +375,6 @@ router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
         { $addToSet: { votes: vote._id } },
         { new: true }
       );
-      
-      // Update candidate vote count if needed
-      try {
-        await Election.updateOne(
-          { _id: electionId, 'questions.options': candidateName },
-          { $inc: { 'questions.$[].$[option].votes': 1 } },
-          { 
-            arrayFilters: [{ 'option': candidateName }]
-          }
-        );
-      } catch (updateError) {
-        console.warn('Could not update candidate vote count:', updateError.message);
-        // Continue even if we can't update the vote count
-      }
       
       return res.status(201).json({
         success: true,
@@ -441,7 +417,6 @@ router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
         error: process.env.NODE_ENV === 'development' ? saveError.message : undefined
       });
     }
-    
   } catch (err) {
     console.error('Vote casting error - Full error:', {
       message: err.message,
@@ -586,20 +561,20 @@ router.get('/user/:userId', auth, async (req, res) => {
 // Get current user's voting history
 router.get('/me/history', auth, async (req, res) => {
   try {
-    // Get votes with detailed election info
-    const votes = await Vote.find({ voter: req.user.id })
+    // Get votes with detailed election info using voter's email
+    const votes = await Vote.find({ voterEmail: req.user.email })
       .populate({
         path: 'election',
-        select: 'title description startDate endDate candidates'
+        select: 'title description startDate endDate questions status', // Added status to selection
       })
       .sort({ votedAt: -1 });
     
-    // Format the response to include more details
+    // Format the response to include more details and resolved vote choices
     const formattedVotes = votes.map(vote => {
       const voteObj = vote.toObject();
       
-      // Add election status
-      if (voteObj.election) {
+      // Add election status if not already present
+      if (voteObj.election && !voteObj.election.status) {
         const now = new Date();
         let status = 'upcoming';
         if (now >= voteObj.election.startDate && now <= voteObj.election.endDate) {
@@ -610,12 +585,27 @@ router.get('/me/history', auth, async (req, res) => {
         voteObj.election.status = status;
       }
       
+      // Resolve question and option text for each vote entry
+      const resolvedChoices = voteObj.votes.map(singleVote => {
+        const question = voteObj.election?.questions.find(q => q._id.equals(singleVote.question));
+        const option = question?.options.find(o => o._id.equals(singleVote.option));
+        
+        return {
+          questionId: singleVote.question,
+          questionText: question?.text || 'Unknown Question',
+          optionId: singleVote.option,
+          optionText: option?.text || 'Unknown Option'
+        };
+      });
+
+      voteObj.resolvedChoices = resolvedChoices;
       return voteObj;
     });
     
     res.status(200).json(formattedVotes);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching voting history:', err);
+    res.status(500).json({ message: 'Failed to fetch voting history' });
   }
 });
 

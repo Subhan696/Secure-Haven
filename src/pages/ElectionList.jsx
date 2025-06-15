@@ -86,6 +86,11 @@ const ElectionList = () => {
               <span className={`status-badge ${getStatusBadgeClass(election.status)}`}>
                 {election.status}
               </span>
+              {election.hasVoted && (
+                <span className="status-badge status-voted">
+                  Voted
+                </span>
+              )}
             </div>
             <p className="election-description">{election.description}</p>
             <div className="election-details">

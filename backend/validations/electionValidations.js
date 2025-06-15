@@ -72,15 +72,7 @@ const updateElectionValidation = [
   
   body('startDate')
     .optional()
-    .isISO8601().withMessage('Start date must be a valid date')
-    .custom((value, { req }) => {
-      const startDate = new Date(value);
-      const now = new Date();
-      if (startDate < now) {
-        throw new Error('Start date cannot be in the past');
-      }
-      return true;
-    }),
+    .isISO8601().withMessage('Start date must be a valid date'),
   
   body('endDate')
     .optional()
@@ -114,7 +106,12 @@ const updateElectionValidation = [
   
   body('voters')
     .optional()
-    .isArray().withMessage('Voters must be an array')
+    .isArray().withMessage('Voters must be an array'),
+
+  body('status')
+    .optional()
+    .isString().withMessage('Status must be a string')
+    .isIn(['draft', 'scheduled', 'live', 'completed', 'ended']).withMessage('Invalid election status')
 ];
 
 /**

@@ -105,6 +105,30 @@
   color: white;
 }
 
+.status-voted {
+  background-color: #cce5ff; /* Light blue */
+  color: #004085; /* Darker blue */
+  margin-left: 0.5rem;
+}
+
+.status-badge.status-completed {
+  background-color: #d6d8d9;
+  color: #495057;
+}
+
+.vote-btn.voted {
+  background-color: #6c757d; /* Grey background for voted button */
+  cursor: not-allowed; /* Indicate it's not clickable */
+  opacity: 0.8;
+  border: none;
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
 .election-description {
   color: #7f8c8d;
   margin-bottom: 1.5rem;
@@ -230,4 +254,9 @@
     font-size: 0.92rem;
     padding: 0.4rem 0.7rem;
   }
+}
+
+/* Results Section Styles */
+.results-section {
+  background: #fff;
 }

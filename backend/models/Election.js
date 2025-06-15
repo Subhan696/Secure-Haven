@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 
 // Options are simple strings in the frontend
-const optionSchema = String;
+const optionSchema = new mongoose.Schema({
+  _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  text: { type: String, required: true }
+});
 
 const questionSchema = new mongoose.Schema({
   text: { type: String, required: true },
@@ -20,7 +23,7 @@ const electionSchema = new mongoose.Schema({
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
   timezone: { type: String, default: 'UTC' },
-  status: { type: String, enum: ['draft', 'scheduled', 'live', 'ended'], default: 'draft' },
+  status: { type: String, enum: ['draft', 'scheduled', 'live', 'ended', 'completed'], default: 'draft' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   questions: [questionSchema],
   voters: [voterSchema],

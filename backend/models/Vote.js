@@ -14,10 +14,16 @@ const voteSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  candidate: { 
-    type: String, 
+  votes: [{
+    question: {
+      type: mongoose.Schema.Types.ObjectId,
     required: true 
   },
+    option: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    }
+  }],
   votedAt: { 
     type: Date, 
     default: Date.now 

@@ -212,7 +212,9 @@ const ElectionBallot = () => {
                     <>
                       <div className="ballot-question-text">{q.text}</div>
                       <ul className="ballot-options-list">
-                        {q.options.map((opt, oidx) => <li key={oidx}>{opt}</li>)}
+                        {q.options.map((opt, oidx) => (
+                          <li key={oidx}>{typeof opt === 'object' ? opt.text : opt}</li>
+                        ))}
                       </ul>
                       <button className="edit-btn" onClick={() => handleEditQuestion(idx)}>Edit</button>
                       <button className="ballot-remove-btn" onClick={() => handleDeleteQuestion(idx)}>Delete</button>

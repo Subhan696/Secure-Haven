@@ -124,9 +124,9 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="election-card-details">
-                    <p>Start: {new Date(election.startDate).toLocaleDateString()}</p>
-                    <p>End: {new Date(election.endDate).toLocaleDateString()}</p>
-                    <p>Candidates: {election.candidates?.length || 0}</p>
+                    <p>Start: {new Date(election.startDate).toLocaleString()}</p>
+                    <p>End: {new Date(election.endDate).toLocaleString()}</p>
+                    <p>Questions: {election.questions?.length || 0}</p>
                     <p>Voters: {election.voters?.length || 0}</p>
                   </div>
                   <div className="election-card-actions">

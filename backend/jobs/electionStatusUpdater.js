@@ -1,5 +1,35 @@
 const Election = require('../models/Election');
 const Vote = require('../models/Vote');
+const mongoose = require('mongoose');
+
+/**
+ * Ensures election options are in the correct format { _id, text }
+ * @param {Object} election - The election document
+ */
+function ensureCorrectOptionsFormat(election) {
+  if (!election.questions || !Array.isArray(election.questions)) return;
+
+  election.questions.forEach(question => {
+    if (!question.options || !Array.isArray(question.options)) return;
+
+    question.options = question.options.map(option => {
+      // If option is already in correct format, return as is
+      if (option && typeof option === 'object' && option.text) {
+        return option;
+      }
+
+      // If option is a string or malformed object, convert to correct format
+      const text = typeof option === 'string' ? option : 
+                  (option && typeof option === 'object' && option.value) ? option.value :
+                  JSON.stringify(option);
+
+      return {
+        _id: new mongoose.Types.ObjectId(),
+        text: text
+      };
+    });
+  });
+}
 
 /**
  * Updates election statuses based on time and votes
@@ -21,6 +51,9 @@ async function updateElectionStatuses() {
     
     // Process each expired election
     for (const election of expiredElections) {
+      // Ensure options are in correct format before any save operation
+      ensureCorrectOptionsFormat(election);
+
       // Check if any votes were cast
       const voteCount = await Vote.countDocuments({ election: election._id });
       

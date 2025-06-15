@@ -14,36 +14,37 @@ const ElectionOverview = () => {
   const { id } = useParams();
   const [election, setElection] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    // Fetch election data from backend API
-    const fetchElection = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get(`/elections/${id}`);
-        
-        if (response.data) {
-          console.log('Election data received:', response.data);
-          console.log('Election status:', response.data.status);
-          setElection(response.data);
-          setError('');
-        } else {
-          setElection(null);
-          setError('Election not found');
-        }
-      } catch (err) {
-        console.error('Error fetching election:', err);
+  const fetchElection = async () => {
+    try {
+      const response = await api.get(`/elections/${id}`);
+      if (response.data) {
+        console.log('Election data received:', response.data);
+        setElection(response.data);
+        setError('');
+      } else {
         setElection(null);
-        setError(err.response?.data?.message || 'Failed to load election details');
-      } finally {
-        setLoading(false);
+        setError('Election not found');
       }
-    };
+    } catch (err) {
+      console.error('Error fetching election:', err);
+      setElection(null);
+      setError(err.response?.data?.message || 'Failed to load election details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchElection();
+    
+    // Set up periodic refresh every 30 seconds
+    const refreshInterval = setInterval(fetchElection, 30000);
+    
+    // Cleanup interval on component unmount
+    return () => clearInterval(refreshInterval);
   }, [id]);
 
   if (loading) {
@@ -84,17 +85,8 @@ const ElectionOverview = () => {
   const totalVoters = election.voters ? election.voters.length : 0;
   const voterParticipation = totalVoters > 0 ? (uniqueVoters / totalVoters) * 100 : 0;
 
-  // Get voter details with their votes
-  const voterDetails = election.voters?.map(voter => {
-    const voterVotes = election.votes?.filter(vote => vote.voterEmail === voter.email) || [];
-    return {
-      ...voter,
-      votes: voterVotes
-    };
-  }) || [];
-
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'live':
         return '#2ecc71';
       case 'scheduled':
@@ -103,13 +95,15 @@ const ElectionOverview = () => {
         return '#e74c3c';
       case 'draft':
         return '#3498db';
+      case 'completed':
+        return '#27ae60';
       default:
         return '#95a5a6';
     }
   };
   
   const getStatusLabel = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'live':
         return 'Live';
       case 'scheduled':
@@ -118,6 +112,8 @@ const ElectionOverview = () => {
         return 'Ended';
       case 'draft':
         return 'Draft';
+      case 'completed':
+        return 'Completed';
       default:
         return 'Unknown';
     }
@@ -128,14 +124,14 @@ const ElectionOverview = () => {
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="election-details-main election-content-animated">
         <div className="sidebar-header-row">
-  <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
-    &#9776;
-  </button>
-  <h2 className="overview-title">{election.title || 'Election'} - Overview</h2>
-  <div className="election-status" style={{ background: getStatusColor(election.status), color: 'white', padding: '5px 10px', borderRadius: '4px', marginLeft: '10px', fontWeight: 'bold', display: 'inline-block' }}>
-    {election.status ? getStatusLabel(election.status) : 'Draft'}
-  </div>
-</div>
+          <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
+            &#9776;
+          </button>
+          <h2 className="overview-title">{election.title || 'Election'} - Overview</h2>
+          <div className="election-status" style={{ background: getStatusColor(election.status), color: 'white', padding: '5px 10px', borderRadius: '4px', marginLeft: '10px', fontWeight: 'bold', display: 'inline-block' }}>
+            {election.status ? getStatusLabel(election.status) : 'Draft'}
+          </div>
+        </div>
         <div className="overview-content">
           <div className="overview-main">
             <div className="overview-row">
@@ -156,22 +152,16 @@ const ElectionOverview = () => {
             </div>
             <div className="overview-row">
               <div className="overview-card">
-                <div className="overview-card-label">Status</div>
-                <div className="overview-card-value" style={{ color: getStatusColor(election.status) }}>
-                  {election.status}
-                </div>
-              </div>
-              <div className="overview-card">
                 <div className="overview-card-label">Voter Participation</div>
                 <div className="overview-card-value">
                   <div className="participation-bar">
                     <div 
                       className="participation-progress" 
-                      style={{ width: `${voterParticipation}%` }}
+                      style={{ width: `${election.voterParticipation.percentage}%` }}
                     />
                   </div>
                   <div className="participation-text">
-                    {uniqueVoters} of {totalVoters} voters ({voterParticipation.toFixed(1)}%)
+                    {election.voterParticipation.votedVoters} of {election.voterParticipation.totalVoters} voters ({election.voterParticipation.percentage.toFixed(1)}%)
                   </div>
                 </div>
               </div>
@@ -180,67 +170,63 @@ const ElectionOverview = () => {
             {/* Results Section */}
             <div className="results-section">
               <h3 className="section-title">Voting Results</h3>
-              {election.questions?.map((question, qIndex) => {
-                const questionVotes = election.votes?.filter(v => v.questionIndex === qIndex) || [];
-                const totalVotes = questionVotes.length;
-                
-                return (
-                  <div key={qIndex} className="question-results">
-                    <h4 className="question-title">{question.text}</h4>
-                    <div className="options-results">
-                      {question.options.map((option, oIndex) => {
-                        const votes = questionVotes.filter(v => v.optionIndex === oIndex).length;
-                        const percentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
+              {election.questions?.map((question) => (
+                <div key={question._id} className="question-results">
+                  <h4 className="question-title">{question.text}</h4>
+                  <div className="options-results">
+                    {question.options.map((option) => {
+                      const voteCount = option.voteCount || 0;
+                      const totalVotes = question.options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
+                      const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
+                      const isWinning = Math.max(...question.options.map(opt => opt.voteCount || 0)) === voteCount && voteCount > 0;
 
-                        return (
-                          <div key={oIndex} className="option-result">
-                            <div className="option-header">
-                              <span className="option-text">{option}</span>
-                              <span className="vote-count">
-                                {votes} votes ({percentage.toFixed(1)}%)
-                              </span>
-                            </div>
-                            <div className="progress-bar">
-                              <div
-                                className="progress"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
+                      return (
+                        <div key={option._id} className={`option-result ${isWinning ? 'winning' : ''}`}>
+                          <div className="option-header">
+                            <span className="option-text">{option.text}</span>
+                            <span className="vote-count">{voteCount} votes</span>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="progress-bar">
+                            <div 
+                              className="progress-fill"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <div className="percentage">{percentage.toFixed(1)}%</div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             {/* Voter Details Section */}
             <div className="voter-details-section">
               <h3 className="section-title">Voter Details</h3>
               <div className="voter-list">
-                {voterDetails.map((voter, index) => (
-                  <div key={index} className="voter-card">
+                {election.voterDetails?.map((voter) => (
+                  <div key={voter._id} className="voter-card">
                     <div className="voter-info">
-                      <span className="voter-name">{voter.name}</span>
+                      <span className="voter-name">{voter.name || 'Anonymous'}</span>
                       <span className="voter-email">{voter.email}</span>
+                      <span className={`voter-status ${voter.hasVoted ? 'voted' : 'not-voted'}`}>
+                        {voter.hasVoted ? 'Voted' : 'Not Voted'}
+                      </span>
                     </div>
-                    <div className="voter-votes">
-                      {voter.votes.length > 0 ? (
-                        voter.votes.map((vote, vIndex) => {
-                          const question = election.questions[vote.questionIndex];
-                          const option = question?.options[vote.optionIndex];
-                          return (
-                            <div key={vIndex} className="vote-detail">
-                              <span className="question-label">Q{vote.questionIndex + 1}:</span>
-                              <span className="option-selected">{option}</span>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <span className="not-voted">Has not voted yet</span>
-                      )}
-                    </div>
+                    {voter.hasVoted && (
+                      <div className="voter-choices">
+                        <div className="vote-time">
+                          Voted on: {new Date(voter.votedAt).toLocaleString()}
+                        </div>
+                        {voter.choices.map((choice, index) => (
+                          <div key={index} className="vote-choice">
+                            <span className="question-label">{choice.questionText}:</span>
+                            <span className="option-selected">{choice.optionText}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

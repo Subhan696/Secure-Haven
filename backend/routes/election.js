@@ -6,29 +6,67 @@ const admin = require('../middleware/admin');
 const Election = require('../models/Election');
 const Vote = require('../models/Vote');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
-// Get available elections for the current voter
+// Helper function to update election status
+async function updateElectionStatus(election) {
+  const now = new Date();
+  if (election.endDate < now && ['live', 'scheduled'].includes(election.status)) {
+    const voteCount = await Vote.countDocuments({ election: election._id });
+    let newStatus;
+    if (voteCount > 0) {
+      newStatus = 'completed';
+    } else {
+      newStatus = 'ended';
+    }
+
+    if (election.status !== newStatus) {
+      election.status = newStatus;
+      await election.save();
+      console.log(`Election ${election.title} (${election._id}) status updated to ${newStatus}`);
+    }
+  }
+  return election;
+}
+
+// Get available elections for voters
 router.get('/available', auth, async (req, res) => {
   try {
-    // Get the current user's email from the token
-    const userEmail = req.user.email.toLowerCase();
-    
-    // Find elections where the current user is a voter and the election is active
-    const now = new Date();
-    
-    const elections = await Election.find({
+    // For voters, only show elections they are a voter in AND are 'live'
+    const userEmail = req.user.email;
+
+    let elections = await Election.find({
       'voters.email': userEmail,
-      status: { $in: ['live', 'active', 'Live', 'Active'] },
-      startDate: { $lte: now },
-      endDate: { $gte: now }
-    }).select('-voters -candidates -questions -createdAt -updatedAt -__v');
-    
-    res.status(200).json(elections);
+      status: 'live' // Only show live elections on the dashboard
+    })
+      .populate('createdBy', 'name email')
+      .sort({ startDate: 1 });
+
+    // Update statuses for fetched elections
+    elections = await Promise.all(
+      elections.map(election => updateElectionStatus(election))
+    );
+
+    // For each election, check if the current user has voted
+    const electionsWithVoteStatus = await Promise.all(elections.map(async (election) => {
+      const existingVote = await Vote.findOne({
+        election: election._id,
+        voterEmail: userEmail
+      });
+      const hasVoted = !!existingVote;
+      const electionObject = election.toObject();
+      electionObject.hasVoted = hasVoted;
+      return electionObject;
+    }));
+
+    res.status(200).json({
+      elections: electionsWithVoteStatus
+    });
   } catch (err) {
-    console.error('Error fetching available elections:', err);
-    res.status(500).json({ message: 'Server error while fetching available elections' });
+    res.status(500).json({ message: err.message });
   }
 });
+
 const validate = require('../middleware/validate');
 const {
   createElectionValidation,
@@ -123,28 +161,31 @@ router.post('/', auth, async (req, res) => {
       return null;
     })).then(results => results.filter(Boolean)) : [];
     
-    // Helper function to generate consistent voter keys
-    function generateVoterKey(email) {
-      // Use a secret salt for additional security - MUST MATCH the frontend salt
-      const salt = 'secure-haven-salt-2024';
-      
-      // Simple hash function that matches the frontend implementation
-      function hashString(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-          const char = str.charCodeAt(i);
-          hash = ((hash << 5) - hash) + char;
-          hash = hash & hash; // Convert to 32bit integer
+    // After processing voters, process questions/options to ensure each option is an object with _id and text
+    const processedQuestions = Array.isArray(questions) ? questions.map(q => {
+      // If options are strings, convert to objects with unique _id and text
+      const processedOptions = Array.isArray(q.options) ? q.options.map(opt => {
+        if (typeof opt === 'object' && opt.text && opt._id) {
+          return opt;
         }
-        return Math.abs(hash).toString(16).toUpperCase();
-      }
-      
-      // Create a hash of the email + salt
-      const hash = hashString(email + salt);
-      
-      // Take first 8 characters for a shorter key
-      return hash.substring(0, 8);
-    }
+        // If already an object but missing _id/text, fix it
+        if (typeof opt === 'object') {
+          return {
+            _id: opt._id || new mongoose.Types.ObjectId(),
+            text: opt.text || opt.name || opt.value || String(opt)
+          };
+        }
+        // If string, convert
+        return {
+          _id: new mongoose.Types.ObjectId(),
+          text: opt
+        };
+      }) : [];
+      return {
+        ...q,
+        options: processedOptions
+      };
+    }) : [];
     
     console.log('Processed voters:', processedVoters);
     
@@ -156,7 +197,7 @@ router.post('/', auth, async (req, res) => {
       endDate,
       timezone: timezone || 'UTC',
       createdBy,
-      questions: questions || [],
+      questions: processedQuestions,
       voters: processedVoters,
       status: status || 'draft'
     };
@@ -193,22 +234,20 @@ router.post('/', auth, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     let query = {};
-    
-    // If user is not admin, only show elections they created or are voters in
-    if (req.user.role !== 'admin') {
-      query = {
-        $or: [
-          { createdBy: req.user.id },
-          { voters: req.user.id }
-        ]
-      };
+
+    if (req.user.role === 'admin') {
+      // Only show elections created by this admin
+      query = { createdBy: req.user.id };
+    } else {
+      // For voters, show elections they are a voter in
+      query = { 'voters.email': req.user.email };
     }
-    
+
     // Apply filters if provided
     if (req.query.status) {
       query.status = req.query.status;
     }
-    
+
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search, 'i');
       query.$or = [
@@ -216,25 +255,43 @@ router.get('/', auth, async (req, res) => {
         { description: searchRegex }
       ];
     }
-    
+
     // Get pagination parameters
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    
+
     // Get total count for pagination
     const total = await Election.countDocuments(query);
-    
+
     // Get elections with pagination
-    const elections = await Election.find(query)
+    let elections = await Election.find(query)
       .populate('createdBy', 'name email')
       .populate('voters', 'name email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-    
+
+    // Update statuses for fetched elections
+    elections = await Promise.all(
+      elections.map(election => updateElectionStatus(election))
+    );
+
+    // For each election, check if the current user has voted
+    const userEmail = req.user.email;
+    const electionsWithVoteStatus = await Promise.all(elections.map(async (election) => {
+      const existingVote = await Vote.findOne({
+        election: election._id,
+        voterEmail: userEmail
+      });
+      const hasVoted = !!existingVote;
+      const electionObject = election.toObject();
+      electionObject.hasVoted = hasVoted;
+      return electionObject;
+    }));
+
     res.status(200).json({
-      elections,
+      elections: electionsWithVoteStatus,
       pagination: {
         total,
         page,
@@ -250,46 +307,88 @@ router.get('/', auth, async (req, res) => {
 // Get a specific election by ID
 router.get('/:id', auth, async (req, res) => {
   try {
-    const election = await Election.findById(req.params.id)
+    const electionId = req.params.id;
+    const election = await Election.findById(electionId)
       .populate('createdBy', 'name email')
-      .populate('votes');
-      
-    console.log('Retrieved election with ID:', req.params.id);
-    console.log('Election status:', election ? election.status : 'not found');
-    console.log('Voters count:', election ? election.voters.length : 0);
-    if (election && election.voters.length > 0) {
-      console.log('First few voters:', election.voters.slice(0, 3));
-    }
-    
+      .populate('voters', 'name email');
+
     if (!election) {
       return res.status(404).json({ message: 'Election not found' });
     }
-    
-    // Log the election data before sending it
-    console.log('Sending election data with status:', election.status);
-    
-    // Ensure status is included in the response
-    const electionData = election.toObject();
-    if (!electionData.status) {
-      electionData.status = 'draft'; // Default to draft if status is missing
-    }
-    
-    // Add calculated time-based status as a separate field
-    const now = new Date();
-    let timeStatus = 'upcoming';
-    if (now >= election.startDate && now <= election.endDate) {
-      timeStatus = 'active';
-    } else if (now > election.endDate) {
-      timeStatus = 'past';
-    }
-    
-    // Return election with both original status and calculated timeStatus
-    res.status(200).json({
-      ...electionData,
-      timeStatus
+
+    // Update status for the fetched election
+    const updatedElection = await updateElectionStatus(election);
+
+    // Check if the current user has voted in this election
+    const userEmail = req.user.email;
+    const existingVote = await Vote.findOne({
+      election: electionId,
+      voterEmail: userEmail
     });
+
+    const hasVoted = !!existingVote;
+
+    // Fetch all votes for this election to calculate results
+    const allVotesForElection = await Vote.find({ election: electionId });
+
+    // Get unique voters who have cast votes
+    const uniqueVoters = new Set(allVotesForElection.map(vote => vote.voterEmail));
+    const totalVoters = updatedElection.voters.length;
+    const voterParticipation = totalVoters > 0 ? (uniqueVoters.size / totalVoters) * 100 : 0;
+
+    // Calculate vote counts for each option within each question
+    const questionsWithResults = updatedElection.questions.map(question => {
+      const optionsWithResults = question.options.map(option => {
+        let voteCount = 0;
+        allVotesForElection.forEach(userVote => {
+          userVote.votes.forEach(singleVote => {
+            if (singleVote.question.equals(question._id) && singleVote.option.equals(option._id)) {
+              voteCount++;
+            }
+          });
+        });
+        return { ...option.toObject(), voteCount };
+      });
+      return { ...question.toObject(), options: optionsWithResults };
+    });
+
+    // Get voter details with their votes
+    const voterDetails = await Promise.all(updatedElection.voters.map(async (voter) => {
+      const voterVote = allVotesForElection.find(vote => vote.voterEmail === voter.email);
+      const resolvedChoices = voterVote ? voterVote.votes.map(singleVote => {
+        const question = updatedElection.questions.find(q => q._id.equals(singleVote.question));
+        const option = question?.options.find(o => o._id.equals(singleVote.option));
+        return {
+          questionId: singleVote.question,
+          questionText: question?.text || 'Unknown Question',
+          optionId: singleVote.option,
+          optionText: option?.text || 'Unknown Option'
+        };
+      }) : [];
+      
+      return {
+        ...voter.toObject(),
+        hasVoted: !!voterVote,
+        votedAt: voterVote?.votedAt,
+        choices: resolvedChoices
+      };
+    }));
+
+    // Add hasVoted status, processed questions, and voter details to the election object
+    const electionWithVoteStatus = updatedElection.toObject();
+    electionWithVoteStatus.hasVoted = hasVoted;
+    electionWithVoteStatus.questions = questionsWithResults;
+    electionWithVoteStatus.voterDetails = voterDetails;
+    electionWithVoteStatus.voterParticipation = {
+      totalVoters,
+      votedVoters: uniqueVoters.size,
+      percentage: voterParticipation
+    };
+
+    res.status(200).json(electionWithVoteStatus);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching election by ID:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

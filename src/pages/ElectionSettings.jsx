@@ -46,6 +46,18 @@ const ElectionSettings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Helper to format ISO date strings for datetime-local input
+  const formatDateTimeLocal = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   useEffect(() => {
     const fetchElection = async () => {
       try {
@@ -57,8 +69,8 @@ const ElectionSettings = () => {
           setElection(election);
           setTitle(election.title || '');
           setDescription(election.description || '');
-          setStartDate(election.startDate || '');
-          setEndDate(election.endDate || '');
+          setStartDate(formatDateTimeLocal(election.startDate) || '');
+          setEndDate(formatDateTimeLocal(election.endDate) || '');
           setTimezone(election.timezone || 'Asia/Karachi');
           setVoters(election.voters || []);
           setError('');
@@ -84,7 +96,21 @@ const ElectionSettings = () => {
   };
   // Dates
   const handleSaveDates = () => {
-    updateElection({ startDate, endDate, timezone });
+    const fieldsToUpdate = { startDate, endDate, timezone };
+
+    // Check if the election is currently completed or ended and endDate is being moved to the future
+    if (election && (election.status === 'completed' || election.status === 'ended')) {
+      const currentEndDate = new Date(election.endDate);
+      const newEndDateObj = new Date(endDate);
+      const now = new Date();
+
+      // If the new end date is in the future and past the current date
+      if (newEndDateObj > now && newEndDateObj > currentEndDate) {
+        fieldsToUpdate.status = 'draft';
+        console.log('Election status set to draft due to extended end date.');
+      }
+    }
+    updateElection(fieldsToUpdate);
   };
   // Voters
   const handleEditVoter = idx => {

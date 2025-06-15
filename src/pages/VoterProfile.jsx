@@ -3,42 +3,67 @@ import VoterHeader from '../components/VoterHeader';
 import './VoterProfile.css';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 
 const VoterProfile = () => {
   const [votingHistory, setVotingHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, loading: authLoading, authError } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   // Fetch user's voting history from the backend
   useEffect(() => {
-    const fetchVotingHistory = async () => {
-      if (!currentUser) {
-        // Redirect to login if not authenticated
-        window.location.href = '/login';
-        return;
-      }
+    // Only redirect if auth is not loading and there's no current user
+    if (!authLoading && !currentUser) {
+      navigate('/login');
+      return;
+    }
 
-      try {
-        setLoading(true);
-        // Use the /votes/me/history endpoint we created in the backend
-        const response = await api.get('/votes/me/history');
-        setVotingHistory(response.data);
-        setError('');
-      } catch (err) {
-        console.error('Error fetching voting history:', err);
-        setError('Failed to load your voting history. Please try again later.');
-        setVotingHistory([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Only fetch history if user is loaded and not null
+    if (currentUser) {
+      const fetchVotingHistory = async () => {
+        try {
+          setLoading(true);
+          // Use the /votes/me/history endpoint we created in the backend
+          const response = await api.get('/votes/me/history');
+          setVotingHistory(response.data);
+          setError('');
+        } catch (err) {
+          console.error('Error fetching voting history:', err);
+          setError(err.response?.data?.message || 'Failed to load your voting history. Please try again later.');
+          setVotingHistory([]);
+        } finally {
+          setLoading(false);
+        }
+      };
 
-    fetchVotingHistory();
-  }, [currentUser]);
+      fetchVotingHistory();
+    }
+  }, [currentUser, authLoading, navigate]);
 
-  if (!currentUser) {
-    return null;
+  if (loading || authLoading) {
+    return (
+      <div className="voter-profile-container">
+        <VoterHeader />
+        <div className="loading">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error || authError) {
+    return (
+      <div className="voter-profile-container">
+        <VoterHeader />
+        <div className="error-message">
+          <div className="error-icon">⚠️</div>
+          <p>{error || authError}</p>
+          <button onClick={() => navigate('/login')} className="back-button">
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -50,12 +75,8 @@ const VoterProfile = () => {
           <p>See all elections you have participated in and their results.</p>
         </div>
         
-        {error && <div className="error-message">{error}</div>}
-        
         <div className="elections-list">
-          {loading ? (
-            <div className="loading">Loading...</div>
-          ) : votingHistory.length === 0 ? (
+          {votingHistory.length === 0 ? (
             <div className="no-elections">
               <p>You haven't participated in any elections yet.</p>
             </div>
@@ -79,13 +100,24 @@ const VoterProfile = () => {
                 
                 <div className="vote-details">
                   <h4>Your Vote</h4>
-                  <p>You voted for: <strong>{vote.candidate}</strong></p>
+                  {vote.resolvedChoices && vote.resolvedChoices.length > 0 ? (
+                    vote.resolvedChoices.map((choice, choiceIndex) => (
+                      <p key={choiceIndex} className="vote-choice">
+                        <strong>{choice.questionText}:</strong> {choice.optionText}
+                      </p>
+                    ))
+                  ) : (
+                    <p>No vote details available.</p>
+                  )}
                   
                   {/* Link to view full election results */}
                   <div className="view-results">
-                    <a href={`/voter-election-results/${vote.election?._id}`} className="results-link">
+                    <Link 
+                      to={`/voter-election/${vote.election?._id}`} 
+                      className="results-link"
+                    >
                       View Full Results
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>

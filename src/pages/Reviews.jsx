@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { FiStar, FiSend } from 'react-icons/fi';
-import reviewsData from '../data/reviewsData';
+import api from '../utils/api';
 import './Reviews.css';
-
-const LOCAL_KEY = 'secureHavenUserReviews';
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([]);
   const [form, setForm] = useState({ 
-    text: '', 
+    comment: '',
     stars: 5, 
     author: '',
     email: ''
@@ -19,25 +17,22 @@ const Reviews = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
-    api.get('/reviews')
-      .then(res => setReviews(res.data))
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      const stored = localStorage.getItem(LOCAL_KEY);
-      if (stored) {
-        setReviews([...reviewsData, ...JSON.parse(stored)]);
-      } else {
-        setReviews(reviewsData);
+    const fetchReviews = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const response = await api.get('/reviews');
+        setReviews(response.data.reviews || []);
+      } catch (err) {
+        console.error('Error fetching reviews:', err);
+        setError(err.response?.data?.message || 'Failed to load reviews. Please try again.');
+        setReviews([]);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
+    };
+
+    fetchReviews();
   }, []);
 
   const handleChange = (e) => {
@@ -54,8 +49,7 @@ const Reviews = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
-    if (!form.text.trim() || form.text.length < 10) {
+    if (!form.comment.trim() || form.comment.length < 10) {
       setError('Please write a detailed review (at least 10 characters)');
       return;
     }
@@ -72,37 +66,30 @@ const Reviews = () => {
 
     setIsSubmitting(true);
     setError('');
+    setSuccess('');
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      const newReviewData = {
+        comment: form.comment.trim(),
+        rating: Number(form.stars),
+        author: form.author.trim(),
+        email: form.email.trim(),
+      };
 
-    
-    const newReview = {
-      text: form.text.trim(),
-      stars: Number(form.stars),
-      author: form.author.trim(),
-      date: new Date().toISOString(),
-      isVerified: false
-    };
-
-    const updatedReviews = [...reviews, newReview];
-    setReviews(updatedReviews);
-    
-    // Save to localStorage, excluding the default reviews
-    const userReviews = updatedReviews.filter(
-      r => !reviewsData.some(d => d.text === r.text && d.author === r.author)
-    );
-    api.post('/reviews', form)
-  .then(() => setSuccess('Thank you for your review!'))
-  .catch(() => setSuccess('Failed to submit review.'));
-setForm({ text: '', stars: 5, author: '', email: '' });
-    
-    setForm({ text: '', stars: 5, author: '', email: '' });
-    setSuccess('Thank you for your review!');
-    setIsSubmitting(false);
-    
-    // Clear success message after 5 seconds
-    setTimeout(() => setSuccess(''), 5000);
+      const response = await api.post('/reviews', newReviewData);
+      setReviews(prevReviews => [...prevReviews, response.data.review]);
+      setSuccess('Thank you for your review!');
+      setForm({ comment: '', stars: 5, author: '', email: '' });
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      setError(err.response?.data?.message || 'Failed to submit review. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => {
+        setSuccess('');
+        setError('');
+      }, 5000);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -145,11 +132,11 @@ setForm({ text: '', stars: 5, author: '', email: '' });
       
       <form className="review-form" onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="review-text">Your Review</label>
+          <label htmlFor="review-comment">Your Review</label>
           <textarea
-            id="review-text"
-            name="text"
-            value={form.text}
+            id="review-comment"
+            name="comment"
+            value={form.comment}
             onChange={handleChange}
             placeholder="Share details about your experience..."
             rows={4}
@@ -225,35 +212,14 @@ setForm({ text: '', stars: 5, author: '', email: '' });
       <div className="review-list">
         {reviews.length > 0 ? (
           reviews.map((review, index) => (
-            <article className="review-card" key={`${review.author}-${index}`}>
+            <div key={review._id || index} className="review-card">
               <div className="review-header">
-                <div className="review-meta">
-                  <div className="review-stars">
-                    <StarRating rating={review.stars} />
-                    <span className="rating-number">{review.stars}.0</span>
-                  </div>
-                  {review.date && (
-                    <time className="review-date" dateTime={review.date}>
-                      {formatDate(review.date)}
-                    </time>
-                  )}
-                </div>
-                {review.isVerified && (
-                  <span className="verified-badge" title="Verified user">
-                    Verified
-                  </span>
-                )}
+                <StarRating rating={review.rating} />
+                <span className="review-author">{review.name || 'Anonymous'}</span>
               </div>
-              <p>{review.text}</p>
-              <footer className="review-footer">
-                <div>
-                  <span className="review-author">{review.author}</span>
-                  {review.role && (
-                    <span className="review-role">{review.role}</span>
-                  )}
-                </div>
-              </footer>
-            </article>
+              <p className="review-text">"{review.comment}"</p>
+              <div className="review-date">Reviewed on {formatDate(review.createdAt)}</div>
+            </div>
           ))
         ) : (
           <p className="no-reviews">No reviews yet. Be the first to review!</p>

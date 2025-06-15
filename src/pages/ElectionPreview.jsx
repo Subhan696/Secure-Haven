@@ -138,7 +138,7 @@ const ElectionPreview = () => {
                       <div className="option-radio">
                         <div className={`radio-inner ${selectedOptions[qIndex] === oIndex ? 'selected' : ''}`} />
                       </div>
-                      <span className="option-text">{option}</span>
+                      <span className="option-text">{typeof option === 'object' ? option.text : option}</span>
                     </div>
                   ))}
                 </div>

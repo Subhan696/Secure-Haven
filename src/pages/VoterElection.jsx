@@ -4,6 +4,7 @@ import VoterHeader from '../components/VoterHeader';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 import './VoterElection.css';
+import axios from 'axios';
 
 const VoterElection = () => {
   const { electionId } = useParams();
@@ -20,6 +21,9 @@ const VoterElection = () => {
   const [isElectionEnded, setIsElectionEnded] = useState(false);
   const [isElectionLive, setIsElectionLive] = useState(false);
 
+  // Define API_URL for Vite
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
   // Fetch election data and check vote status
   const fetchElectionData = useCallback(async () => {
     if (!electionId || !currentUser) return;
@@ -29,14 +33,19 @@ const VoterElection = () => {
     
     try {
       // Fetch election data and vote status in parallel
-      const [electionRes, voteCheckRes] = await Promise.all([
+      const [electionRes] = await Promise.all([
         api.get(`/elections/${electionId}`),
-        api.get(`/votes/check/${electionId}`).catch(() => ({
-          data: { success: false, hasVoted: false }
-        }))
       ]);
       
       const electionData = electionRes.data;
+      console.log('Election data received:', electionData); // Debug log
+      
+      if (!electionData.questions || electionData.questions.length === 0) {
+        setError('This election has no questions available.');
+        setLoading(false);
+        return;
+      }
+      
       setElection(electionData);
       
       // Check election status
@@ -49,15 +58,15 @@ const VoterElection = () => {
                    now <= endDate;
       
       setIsElectionLive(isLive);
-      setIsElectionEnded(now > endDate);
+      setIsElectionEnded(electionData.status === 'completed' || electionData.status === 'ended' || now > endDate);
       
-      // Set vote status
-      setHasVoted(voteCheckRes.data?.hasVoted || false);
+      // Set vote status from the fetched election data
+      setHasVoted(electionData.hasVoted || false);
       
       // Initialize selected options
       const initialOptions = {};
-      electionData.questions?.forEach((_, index) => {
-        initialOptions[index] = null;
+      electionData.questions?.forEach((q) => {
+        initialOptions[q._id] = null;
       });
       setSelectedOptions(initialOptions);
       
@@ -75,82 +84,71 @@ const VoterElection = () => {
   }, [fetchElectionData]);
   
   // Handle option selection
-  const handleOptionSelect = (questionIndex, optionIndex) => {
+  const handleOptionSelect = (questionId, optionId) => {
     if (hasVoted || !isElectionLive) return;
-    
     setSelectedOptions(prev => ({
       ...prev,
-      [questionIndex]: optionIndex
+      [questionId]: optionId
     }));
   };
   
   // Handle vote submission
-  const handleVote = async () => {
-    if (!currentUser || !election) return;
-    
-    try {
+  const handleVote = async (e) => {
+    e.preventDefault();
       setLoading(true);
       setError(null);
-      
-      // Validate that at least one option is selected
-      const hasAtLeastOneVote = Object.values(selectedOptions).some(v => v !== null);
-      if (!hasAtLeastOneVote) {
-        setError('Please select at least one option before submitting your vote.');
+    setSuccess(null);
+
+    try {
+      // Validate that all questions have been answered
+      const unansweredQuestions = election.questions.filter(
+        question => !selectedOptions[question._id]
+      );
+
+      if (unansweredQuestions.length > 0) {
+        setError('Please answer all questions before submitting your vote.');
         setLoading(false);
         return;
       }
       
-      // Prepare vote data
-      const votes = [];
-      Object.entries(selectedOptions).forEach(([qIndex, oIndex]) => {
-        if (oIndex !== null) {
-          votes.push({
-            question: election.questions[qIndex]._id,
-            option: election.questions[qIndex].options[oIndex]._id
-          });
-        }
-      });
+      // Format votes for submission
+      const votes = Object.entries(selectedOptions).map(([questionId, optionId]) => ({
+        question: questionId,
+        option: optionId
+      }));
       
-      // Submit votes
-      const response = await api.post('/votes/submit', { 
-        electionId: election._id,
-        votes 
-      });
+      console.log('Submitting votes:', votes);
+
+      const response = await axios.post(
+        `${API_URL}/votes`,
+        {
+          election: electionId,
+          votes: votes
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
       
       if (response.data.success) {
         setSuccess('Your vote has been recorded successfully!');
+        // Clear selected options after successful vote
+        setSelectedOptions({});
         setHasVoted(true);
-        
-        // Update local storage
-        const votedElections = JSON.parse(localStorage.getItem('votedElections') || '[]');
-        if (!votedElections.includes(election._id)) {
-          votedElections.push(election._id);
-          localStorage.setItem('votedElections', JSON.stringify(votedElections));
-        }
-        
-        // Update the UI with the latest data
-        const [electionRes] = await Promise.all([
-          api.get(`/elections/${electionId}/results`)
-        ]);
-        
-        setElection(electionRes.data);
-        
-        // Show success message for a moment before redirecting
-        setTimeout(() => {
-          navigate(`/voter-election-results/${election._id}`, { 
-            state: { 
-              message: 'Your vote has been recorded successfully!',
-              type: 'success',
-              justVoted: true
-            },
-            replace: true
-          });
-        }, 1500);
+        // Optionally re-fetch election data to display updated results immediately
+        fetchElectionData();
+      } else {
+        setError(response.data.message || 'Failed to submit vote. Please try again.');
       }
-      
     } catch (err) {
       console.error('Error submitting vote:', err);
-      setError(err.response?.data?.message || 'Failed to submit vote. Please try again.');
+      setError(
+        err.response?.data?.message || 
+        'An error occurred while submitting your vote. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -231,16 +229,16 @@ const VoterElection = () => {
           </div>
           
           {election.questions?.map((question, qIndex) => {
-            const totalVotes = question.options?.reduce((sum, opt) => sum + (opt.votes?.length || 0), 0) || 0;
+            const totalVotes = question.options?.reduce((sum, opt) => sum + (opt.voteCount || 0), 0) || 0;
             
             return (
               <div key={qIndex} className="question-results">
                 <h3>Question {qIndex + 1}: {question.text}</h3>
                 <div className="results-chart">
                   {question.options?.map((option, oIndex) => {
-                    const voteCount = option.votes?.length || 0;
+                    const voteCount = option.voteCount || 0;
                     const percentage = totalVotes > 0 ? ((voteCount / totalVotes) * 100).toFixed(1) : 0;
-                    const isWinning = Math.max(...question.options.map(o => o.votes?.length || 0)) === voteCount;
+                    const isWinning = Math.max(...question.options.map(o => o.voteCount || 0)) === voteCount && voteCount > 0;
                     
                     return (
                       <div key={oIndex} className="result-bar-container">
@@ -293,9 +291,11 @@ const VoterElection = () => {
       <div className="voting-container">
         <div className="voting-header">
           <h1>{election.title}</h1>
-          <p className="election-meta">
-            {new Date(election.startDate).toLocaleDateString()} - {new Date(election.endDate).toLocaleDateString()}
-          </p>
+          <p className="election-description">{election.description}</p>
+          <div className="election-meta">
+            <p><strong>Start Date:</strong> {new Date(election.startDate).toLocaleString()}</p>
+            <p><strong>End Date:</strong> {new Date(election.endDate).toLocaleString()}</p>
+          </div>
         </div>
 
         {error && <div className="alert alert-error">{error}</div>}
@@ -312,19 +312,19 @@ const VoterElection = () => {
           </ul>
         </div>
 
-        <div className="voting-form">
+        <form onSubmit={(e) => { e.preventDefault(); handleVote(e); }} className="voting-form">
           {election.questions?.map((question, qIndex) => (
-            <div key={qIndex} className="question-container">
+            <div key={question._id} className="question-container">
               <h3>Question {qIndex + 1}: {question.text}</h3>
               <div className="options-container">
-                {question.options.map((option, oIndex) => (
+                {question.options?.map((option) => (
                   <div 
-                    key={oIndex}
-                    className={`option ${selectedOptions[qIndex] === oIndex ? 'selected' : ''}`}
-                    onClick={() => handleOptionSelect(qIndex, oIndex)}
+                    key={option._id}
+                    className={`option ${selectedOptions[question._id] === option._id ? 'selected' : ''}`}
+                    onClick={() => handleOptionSelect(question._id, option._id)}
                   >
                     <div className="option-radio">
-                      <div className={`radio-inner ${selectedOptions[qIndex] === oIndex ? 'selected' : ''}`} />
+                      <div className={`radio-inner ${selectedOptions[question._id] === option._id ? 'selected' : ''}`} />
                     </div>
                     <span className="option-text">{option.text}</span>
                   </div>
@@ -335,28 +335,32 @@ const VoterElection = () => {
 
           <div className="voting-actions">
             <button 
-              className="btn btn-primary submit-vote"
-              onClick={handleVote}
-              disabled={Object.values(selectedOptions).some(v => v === null) || !isElectionLive}
+              type="button"
+              onClick={handleClearAll}
+              className="btn btn-secondary"
+              disabled={loading || hasVoted || !isElectionLive}
             >
-              {isElectionLive ? 'Submit Vote' : 'Voting Not Available'}
+              Clear All
             </button>
             <button 
-              className="btn btn-secondary"
-              onClick={handleClearAll}
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading || hasVoted || !isElectionLive || Object.values(selectedOptions).every(v => v === null)}
             >
-              Clear Selections
+              {loading ? 'Submitting...' : 'Submit Vote'}
             </button>
           </div>
+        </form>
           
           {!isElectionLive && (
             <div className="election-status-message">
-              {isElectionEnded 
-                ? 'This election has ended. Voting is no longer available.'
-                : 'This election has not started yet. Please check back later.'}
+            {isElectionEnded ? (
+              <p>This election has ended. You can view the results above.</p>
+            ) : (
+              <p>This election has not started yet. Please check back later.</p>
+            )}
             </div>
           )}
-        </div>
       </div>
     </div>
   );

@@ -5,33 +5,37 @@ const auth = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { createReviewValidation, updateReviewValidation } = require('../validations/reviewValidations');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // Create a review
 router.post('/', auth, validate(createReviewValidation), async (req, res) => {
   try {
-    // Get name from authenticated user if not provided
-    const { rating, comment } = req.body;
-    const name = req.body.name || req.user.name;
-    
-    // Validate input
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ message: 'Please provide a valid rating between 1 and 5' });
-    }
-    
-    if (!comment) {
-      return res.status(400).json({ message: 'Please provide a comment' });
+    const { rating, comment, author, email } = req.body;
+
+    // Determine the name for the review (prefer author from frontend, then authenticated user's name)
+    const reviewName = author || req.user.name || 'Anonymous';
+
+    // Determine the reviewer email (prefer email from frontend, then authenticated user's email)
+    const reviewerEmail = email || req.user.email;
+
+    // Determine the user field (only if it's a valid ObjectId, otherwise null for voters)
+    let userId = null;
+    if (req.user.role !== 'voter' && mongoose.Types.ObjectId.isValid(req.user.id)) {
+      userId = req.user.id;
     }
     
     const review = new Review({ 
-      name, 
+      name: reviewName,
       rating, 
       comment,
-      user: req.user.id // Link review to user
+      user: userId,
+      reviewerEmail: reviewerEmail,
     });
     
     await review.save();
     res.status(201).json({ message: 'Review submitted successfully', review });
   } catch (err) {
+    console.error('Error submitting review in backend:', err);
     res.status(500).json({ message: err.message });
   }
 });
