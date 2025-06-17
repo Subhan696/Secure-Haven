@@ -17,28 +17,28 @@ const VoterProfile = () => {
     // Only redirect if auth is not loading and there's no current user
     if (!authLoading && !currentUser) {
       navigate('/login');
-      return;
-    }
+        return;
+      }
 
     // Only fetch history if user is loaded and not null
     if (currentUser) {
       const fetchVotingHistory = async () => {
-        try {
-          setLoading(true);
-          // Use the /votes/me/history endpoint we created in the backend
-          const response = await api.get('/votes/me/history');
-          setVotingHistory(response.data);
-          setError('');
-        } catch (err) {
-          console.error('Error fetching voting history:', err);
+      try {
+        setLoading(true);
+        // Use the /votes/me/history endpoint we created in the backend
+        const response = await api.get('/votes/me/history');
+        setVotingHistory(response.data);
+        setError('');
+      } catch (err) {
+        console.error('Error fetching voting history:', err);
           setError(err.response?.data?.message || 'Failed to load your voting history. Please try again later.');
-          setVotingHistory([]);
-        } finally {
-          setLoading(false);
-        }
-      };
+        setVotingHistory([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchVotingHistory();
+    fetchVotingHistory();
     }
   }, [currentUser, authLoading, navigate]);
 

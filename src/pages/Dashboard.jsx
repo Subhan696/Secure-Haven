@@ -129,8 +129,37 @@ const Dashboard = () => {
                     <p>Questions: {election.questions?.length || 0}</p>
                     <p>Voters: {election.voters?.length || 0}</p>
                   </div>
+
+                  {/* Mini Results Section for Dashboard */}
+                  <div className="election-mini-results">
+                    <h4 className="mini-results-title">Current Results</h4>
+                    {election.questions?.length > 0 ? (
+                      election.questions.map(question => (
+                        <div key={question._id} className="mini-question-results">
+                          <p className="mini-question-text">{question.text}</p>
+                          <div className="mini-options-list">
+                            {question.options.map(option => {
+                              const voteCount = option.voteCount || 0;
+                              const totalVotesForQuestion = question.options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
+                              const percentage = totalVotesForQuestion > 0 ? (voteCount / totalVotesForQuestion) * 100 : 0;
+                              const isWinning = Math.max(...question.options.map(opt => opt.voteCount || 0)) === voteCount && voteCount > 0;
+                              return (
+                                <div key={option._id} className={`mini-option-item ${isWinning ? 'winning' : ''}`}>
+                                  <span className="mini-option-text">{option.text}</span>
+                                  <span className="mini-option-votes">{voteCount} ({percentage.toFixed(1)}%)</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="no-results-message">No questions available for results.</p>
+                    )}
+                  </div>
+
                   <div className="election-card-actions">
-                    <Link to={`/dashboard/elections/${election._id}/overview`} className="view-btn">
+                    <Link to={`/dashboard/elections/${election._id}/overview`} className="dashboard-view-btn">
                       View Details
                     </Link>
                   </div>

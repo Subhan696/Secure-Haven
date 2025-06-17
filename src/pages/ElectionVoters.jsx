@@ -14,6 +14,7 @@ const ElectionVoters = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingVoter, setEditingVoter] = useState(null);
   const [editEmail, setEditEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -68,6 +69,7 @@ const ElectionVoters = () => {
     }
 
     try {
+      setIsSaving(true);
       // Create voter object - let the backend generate the voter key
       const voterObj = {
         name: email.split('@')[0],
@@ -91,6 +93,8 @@ const ElectionVoters = () => {
         type: 'error', 
         text: err.response?.data?.message || 'Error adding voter' 
       });
+    } finally {
+      setIsSaving(false);
     }
     
     // Clear message after 3 seconds
@@ -125,6 +129,7 @@ const ElectionVoters = () => {
     }
 
     try {
+      setIsSaving(true);
       // First remove the old voter
       await api.delete(`/elections/${id}/voters/${editingVoter.email}`);
       
@@ -162,6 +167,8 @@ const ElectionVoters = () => {
         type: 'error',
         text: err.message || 'Failed to update voter. Please try again.'
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -172,6 +179,7 @@ const ElectionVoters = () => {
 
   const handleRemoveVoter = async (email) => {
     try {
+      setIsSaving(true);
       console.log('Removing voter with email:', email);
       
       // Send request to backend API to remove voter
@@ -206,6 +214,26 @@ const ElectionVoters = () => {
         type: 'error',
         text: err.message || 'Failed to remove voter. Please try again.'
       });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // New function to set election status to draft
+  const handleSetToDraft = async () => {
+    try {
+      setIsSaving(true);
+      setError('');
+      const response = await api.put(`/elections/${id}/status`, { status: 'draft' });
+      if (response.data) {
+        setElection(prev => ({ ...prev, status: 'draft' }));
+        alert('Election status set to Draft. You can now manage voters.');
+      }
+    } catch (err) {
+      console.error('Error setting to draft:', err);
+      setError(err.response?.data?.message || 'Failed to set election to draft.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -242,6 +270,9 @@ const ElectionVoters = () => {
     );
   }
 
+  // Check if election is available and in editable status
+  const isEditable = election && (election.status === 'draft' || election.status === 'scheduled' || election.status === 'ended');
+
   return (
     <div className="election-details-layout">
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
@@ -250,85 +281,84 @@ const ElectionVoters = () => {
   <button className="sidebar-toggle sidebar-toggle-mobile" aria-label="Open sidebar" onClick={() => setSidebarOpen(o => !o)}>
     &#9776;
   </button>
-  <h2 className="voters-title">Manage Voters</h2>
-</div>
-        
-        {message.text && (
-          <div className={`message ${message.type}`}>
-            {message.text}
+          <h2 className="voters-title">Election Voters</h2>
+        </div>
+        {!isEditable && election && election.status !== 'completed' && election.status !== 'live' && (
+          <div className="status-warning">
+            <p>
+              Voter management is disabled because the election is currently{' '}
+              <strong>{election.status}</strong>.
+              To make changes, please revert the election to{' '}
+              <button onClick={handleSetToDraft} disabled={isSaving}>
+                Draft
+              </button>
+              {' '}status or wait for it to be scheduled/ended.
+            </p>
           </div>
         )}
 
-        <div className="voters-content">
-          <div className="add-voter-section">
-            <h3>Add New Voter</h3>
-            <form onSubmit={handleAddVoter}>
-              <div className="form-group">
-                <input
-                  type="email"
-                  value={newVoter}
-                  onChange={(e) => setNewVoter(e.target.value)}
-                  placeholder="Enter voter's email"
-                  required
-                />
-                <button type="submit" className="btn-primary">Add Voter</button>
-              </div>
+        {election && (election.status === 'completed' || election.status === 'live') ? (
+          <div className="voters-closed-msg">
+            This election is {election.status}. Voter management is no longer allowed.
+          </div>
+        ) : (
+          <div className="voters-content">
+            <form onSubmit={handleAddVoter} className="form-group">
+              <h3>Add New Voter</h3>
+              <input
+                type="email"
+                placeholder="Enter voter email"
+                value={newVoter}
+                onChange={(e) => setNewVoter(e.target.value)}
+                disabled={!isEditable || isSaving}
+                className="form-group-input"
+              />
+              <button type="submit" disabled={!isEditable || isSaving} className="btn-primary">Add Voter</button>
             </form>
-          </div>
 
-          <div className="voters-list">
-            <h3>Current Voters</h3>
-            {voters.length === 0 ? (
-              <p className="no-voters">No voters added yet.</p>
-            ) : (
-              <div className="voters-grid">
-                {voters.map((voter, index) => (
-                  <div key={index} className="voter-card">
-                    {editingVoter && editingVoter.email === voter.email ? (
-                      <form onSubmit={handleSaveEdit} className="edit-form">
-                        <input
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                          placeholder="Enter new email"
-                          required
-                          className="edit-input"
-                        />
-                        <div className="edit-actions">
-                          <button type="submit" className="save-btn">Save</button>
-                          <button type="button" onClick={handleCancelEdit} className="cancel-btn">Cancel</button>
-                        </div>
-                      </form>
-                    ) : (
-                      <>
-                        <div className="voter-info">
-                          <div className="voter-email">{voter.email}</div>
-                          <div className="voter-key">
-                            <strong>Key:</strong> {voter.voterKey || voter.key || 'N/A'}
+            <div className="voters-list">
+              <h3>Current Voters ({voters.length})</h3>
+              {message.text && (
+                <div className={`message ${message.type === 'error' ? 'error' : 'success'}`}>
+                  {message.text}
+                </div>
+              )}
+              {voters.length === 0 ? (
+                <p className="no-voters">No voters added yet.</p>
+              ) : (
+                <ul className="voters-grid">
+                  {voters.map((voter, index) => (
+                    <li key={index} className="voter-card">
+                      {editingVoter && editingVoter.email === voter.email ? (
+                        <form onSubmit={handleSaveEdit} className="edit-form">
+                          <input
+                            type="email"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            disabled={!isEditable || isSaving}
+                            className="edit-input"
+                          />
+                          <div className="edit-actions">
+                            <button type="submit" disabled={!isEditable || isSaving} className="save-btn">Save</button>
+                            <button type="button" onClick={handleCancelEdit} disabled={isSaving} className="cancel-btn">Cancel</button>
                           </div>
-                        </div>
-                        <div className="voter-actions">
-                          <button
-                            className="edit-voter"
-                            onClick={() => handleEditVoter(voter)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="remove-voter"
-                            onClick={() => handleRemoveVoter(voter.email)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                        </form>
+                      ) : (
+                        <>
+                          <span>{typeof voter === 'object' ? `${voter.name} (${voter.email})` : voter}</span>
+                          <div className="voter-actions">
+                            <button onClick={() => handleEditVoter(voter)} disabled={!isEditable || isSaving} className="edit-voter">Edit</button>
+                            <button onClick={() => handleRemoveVoter(voter.email)} disabled={!isEditable || isSaving} className="remove-voter">Remove</button>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

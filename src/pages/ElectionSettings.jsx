@@ -7,8 +7,6 @@ import './ElectionSettings.css';
 const tabs = [
   { label: 'General', key: 'general' },
   { label: 'Dates', key: 'dates' },
-  { label: 'Voters', key: 'voters' },
-  { label: 'Launch', key: 'launch' },
   { label: 'Delete', key: 'delete' },
 ];
 
@@ -32,19 +30,12 @@ const ElectionSettings = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [timezone, setTimezone] = useState('Asia/Karachi');
-  // Voters
-  const [voters, setVoters] = useState([]);
-  const [editIdx, setEditIdx] = useState(null);
-  const [editName, setEditName] = useState('');
-  const [editEmail, setEditEmail] = useState('');
   // Delete
   const [showDelete, setShowDelete] = useState(false);
-  // Launch
-  const [isLaunching, setIsLaunching] = useState(false);
-  const [launchMessage, setLaunchMessage] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Helper to format ISO date strings for datetime-local input
   const formatDateTimeLocal = (isoString) => {
@@ -72,7 +63,6 @@ const ElectionSettings = () => {
           setStartDate(formatDateTimeLocal(election.startDate) || '');
           setEndDate(formatDateTimeLocal(election.endDate) || '');
           setTimezone(election.timezone || 'Asia/Karachi');
-          setVoters(election.voters || []);
           setError('');
         } else {
           setElection(null);
@@ -112,23 +102,6 @@ const ElectionSettings = () => {
     }
     updateElection(fieldsToUpdate);
   };
-  // Voters
-  const handleEditVoter = idx => {
-    setEditIdx(idx);
-    setEditName(voters[idx].name);
-    setEditEmail(voters[idx].email);
-  };
-  const handleSaveVoter = idx => {
-    const updated = voters.map((v, i) => i === idx ? { name: editName, email: editEmail } : v);
-    setVoters(updated);
-    setEditIdx(null);
-    updateElection({ voters: updated });
-  };
-  const handleDeleteVoter = idx => {
-    const updated = voters.filter((_, i) => i !== idx);
-    setVoters(updated);
-    updateElection({ voters: updated });
-  };
   // Delete
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -149,40 +122,24 @@ const ElectionSettings = () => {
       setShowDelete(false);
     }
   };
-  
-  // Launch election
-  const handleLaunchElection = async (status) => {
+
+  // New function to set election status to draft
+  const handleSetToDraft = async () => {
     try {
-      setIsLaunching(true);
+      setIsSaving(true);
       setError('');
-      setLaunchMessage('');
-      
-      // Send request to backend API to update election status
-      const response = await api.put(`/elections/${id}/status`, { status });
-      
+      const response = await api.put(`/elections/${id}/status`, { status: 'draft' });
       if (response.data) {
-        // Update election state with new status
-        setElection(prev => ({
-          ...prev,
-          status: status
-        }));
-        
-        // Show success message
-        setLaunchMessage(
-          status === 'live' ? 'Election launched successfully!' : 
-          status === 'ended' ? 'Election ended successfully!' : 
-          'Election status updated successfully!'
-        );
+        setElection(prev => ({ ...prev, status: 'draft' }));
+        alert('Election status set to Draft. You can now edit settings.');
       }
     } catch (err) {
-      console.error('Error updating election status:', err);
-      setError(err.message || 'Failed to update election status. Please try again.');
+      console.error('Error setting to draft:', err);
+      setError(err.response?.data?.message || 'Failed to set election to draft.');
     } finally {
-      setIsLaunching(false);
+      setIsSaving(false);
     }
   };
-
-  const [isSaving, setIsSaving] = useState(false);
   
   async function updateElection(fields) {
     try {
@@ -240,6 +197,9 @@ const ElectionSettings = () => {
     );
   }
 
+  // Check if election is available and in editable status
+  const isEditable = election && (election.status === 'draft' || election.status === 'scheduled' || election.status === 'ended');
+
   return (
     <div className="election-details-layout">
       <ElectionSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
@@ -263,166 +223,130 @@ const ElectionSettings = () => {
             ))}
           </div>
           <div className="settings-panel">
-            {activeTab === 'general' && (
-              <>
-                <h3 className="settings-panel-title">General Settings</h3>
-                <div className="form-group">
-                  <label>Title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea
-                    value={description}
-                    onChange={e => setDescription(e.target.value.slice(0, MAX_DESC))}
-                    rows={8}
-                    maxLength={MAX_DESC}
-                  />
-                  <div className="desc-count">Max Length: 5,000 characters. ({MAX_DESC - description.length} remaining)</div>
-                </div>
-                <button className="settings-save-btn" onClick={handleSaveGeneral}>Save</button>
-              </>
-            )}
-            {activeTab === 'dates' && (
-              <>
-                <h3 className="settings-panel-title">Election Dates</h3>
-                <div className="date-inputs-container">
+            <div className="tab-content">
+              {activeTab === 'general' && (
+                <div className="settings-section general-settings">
+                  <h2>General Election Settings</h2>
+                  {election && (election.status === 'live' || election.status === 'completed') ? (
+                    <div className="status-warning">
+                      <p>
+                        General settings are disabled because the election is currently{' '}
+                        <strong>{election.status}</strong>.
+                        To make changes, please revert the election to{' '}
+                        <button onClick={() => handleSetToDraft()} disabled={isSaving}>
+                          Draft
+                        </button>
+                        {' '}status.
+                      </p>
+                    </div>
+                  ) : null}
+
                   <div className="form-group">
-                    <label>Start Date</label>
+                    <label htmlFor="title">Election Title</label>
+                    <input
+                      type="text"
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      disabled={!isEditable || isSaving}
+                      placeholder="Enter election title"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="description">Description (optional)</label>
+                    <textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      maxLength={MAX_DESC}
+                      disabled={!isEditable || isSaving}
+                      placeholder="Provide a brief description of the election"
+                    ></textarea>
+                    <div className="char-count">
+                      {description.length}/{MAX_DESC}
+                    </div>
+                  </div>
+                  <button onClick={handleSaveGeneral} className="btn-primary" disabled={!isEditable || isSaving}>
+                    {isSaving ? 'Saving...' : 'Save '}
+                  </button>
+                </div>
+              )}
+
+              {activeTab === 'dates' && (
+                <div className="settings-section date-settings">
+                  <h2>Election Dates & Timezone</h2>
+                  {election && (election.status === 'live' || election.status === 'completed') ? (
+                    <div className="status-warning">
+                      <p>
+                        Date settings are disabled because the election is currently{' '}
+                        <strong>{election.status}</strong>.
+                        To make changes, please revert the election to{' '}
+                        <button onClick={() => handleSetToDraft()} disabled={isSaving}>
+                          Draft
+                        </button>
+                        {' '}status.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="form-group">
+                    <label htmlFor="startDate">Start Date & Time</label>
                     <input
                       type="datetime-local"
+                      id="startDate"
                       value={startDate}
-                      onChange={e => setStartDate(e.target.value)}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      disabled={!isEditable || isSaving}
                     />
                   </div>
                   <div className="form-group">
-                    <label>End Date</label>
+                    <label htmlFor="endDate">End Date & Time</label>
                     <input
                       type="datetime-local"
+                      id="endDate"
                       value={endDate}
-                      onChange={e => setEndDate(e.target.value)}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      disabled={!isEditable || isSaving}
                     />
                   </div>
-                </div>
-                <div className="form-group">
-                  <label>Timezone</label>
-                  <select value={timezone} onChange={e => setTimezone(e.target.value)}>
-                    {timezones.map(tz => (
-                      <option key={tz.value} value={tz.value}>{tz.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <button className="settings-save-btn" onClick={handleSaveDates}>Save</button>
-              </>
-            )}
-            {activeTab === 'voters' && (
-              <>
-                <h3 className="settings-panel-title">Voters</h3>
-                <ul className="voters-list">
-                  {voters.length === 0 && <li style={{ color: '#888' }}>No voters added.</li>}
-                  {voters.map((v, idx) => (
-                    <li key={idx} className="voter-item">
-                      {editIdx === idx ? (
-                        <>
-                          <input
-                            type="text"
-                            value={editName}
-                            onChange={e => setEditName(e.target.value)}
-                            style={{ marginRight: 8 }}
-                          />
-                          <input
-                            type="email"
-                            value={editEmail}
-                            onChange={e => setEditEmail(e.target.value)}
-                            style={{ marginRight: 8 }}
-                          />
-                          <button className="settings-save-btn" style={{ padding: '0.3rem 1rem', fontSize: '0.95rem' }} onClick={() => handleSaveVoter(idx)}>Save</button>
-                          <button className="cancel-btn" style={{ padding: '0.3rem 1rem', fontSize: '0.95rem' }} onClick={() => setEditIdx(null)}>Cancel</button>
-                        </>
-                      ) : (
-                        <>
-                          <span>{v.name} &lt;{v.email}&gt;</span>
-                          <button className="edit-btn" style={{ marginLeft: 12, padding: '0.3rem 1rem', fontSize: '0.95rem' }} onClick={() => handleEditVoter(idx)}>Edit</button>
-                          <button className="cancel-btn" style={{ marginLeft: 6, padding: '0.3rem 1rem', fontSize: '0.95rem' }} onClick={() => handleDeleteVoter(idx)}>Delete</button>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            {activeTab === 'launch' && (
-              <>
-                <h3 className="settings-panel-title">Launch Election</h3>
-                {launchMessage && (
-                  <div style={{ background: '#d4edda', color: '#155724', padding: '10px 15px', borderRadius: '4px', marginBottom: '20px' }}>
-                    {launchMessage}
+                  <div className="form-group">
+                    <label htmlFor="timezone">Timezone</label>
+                    <select
+                      id="timezone"
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      disabled={!isEditable || isSaving}
+                    >
+                      {timezones.map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
-                {error && (
-                  <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px 15px', borderRadius: '4px', marginBottom: '20px' }}>
-                    {error}
-                  </div>
-                )}
-                <div style={{ marginBottom: '20px' }}>
-                  <p><strong>Current Status:</strong> {election?.status || 'draft'}</p>
-                  <p>Change the status of your election to launch it or end it.</p>
-                </div>
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                  <button 
-                    className="settings-save-btn" 
-                    style={{ background: '#28a745' }}
-                    onClick={() => handleLaunchElection('live')}
-                    disabled={isLaunching || election?.status === 'live'}
-                  >
-                    {isLaunching ? 'Launching...' : 'Launch Election'}
-                  </button>
-                  <button 
-                    className="settings-save-btn" 
-                    style={{ background: '#ffc107', color: '#212529' }}
-                    onClick={() => handleLaunchElection('scheduled')}
-                    disabled={isLaunching || election?.status === 'scheduled'}
-                  >
-                    {isLaunching ? 'Scheduling...' : 'Schedule Election'}
-                  </button>
-                  <button 
-                    className="cancel-btn" 
-                    style={{ background: '#dc3545', color: '#fff' }}
-                    onClick={() => handleLaunchElection('ended')}
-                    disabled={isLaunching || election?.status === 'ended' || election?.status === 'draft'}
-                  >
-                    {isLaunching ? 'Ending...' : 'End Election'}
+                  <button onClick={handleSaveDates} className="btn-primary" disabled={!isEditable || isSaving}>
+                    {isSaving ? 'Saving...' : 'Save '}
                   </button>
                 </div>
-                <div style={{ marginTop: '20px' }}>
-                  <h4>Status Explanation:</h4>
-                  <ul style={{ listStyleType: 'disc', paddingLeft: '20px' }}>
-                    <li><strong>Draft:</strong> Election is being prepared and is not visible to voters.</li>
-                    <li><strong>Scheduled:</strong> Election is visible to voters but voting is not yet open.</li>
-                    <li><strong>Live:</strong> Election is active and voters can cast their votes.</li>
-                    <li><strong>Ended:</strong> Election is closed and no more votes can be cast.</li>
-                  </ul>
+              )}
+
+              {activeTab === 'delete' && (
+                <div className="settings-section delete-section">
+                  <h2>Delete Election</h2>
+                  <p>Permanently delete this election. This action cannot be undone.</p>
+                  <button onClick={() => setShowDelete(true)} className="btn-delete" disabled={isDeleting}>
+                    {isDeleting ? 'Deleting...' : 'Delete Election'}
+                  </button>
+                  {showDelete && (
+                    <div className="delete-confirmation">
+                      <p>Are you sure you want to delete this election?</p>
+                      <button onClick={handleDeleteElection} className="btn-delete" disabled={isDeleting}>Yes, Delete</button>
+                      <button onClick={() => setShowDelete(false)} className="btn-secondary" disabled={isDeleting}>Cancel</button>
+                    </div>
+                  )}
                 </div>
-              </>
-            )}
-            {activeTab === 'delete' && (
-              <>
-                <h3 className="settings-panel-title">Delete Election</h3>
-                <p style={{ color: '#e74c3c', marginBottom: 16 }}>This action cannot be undone. Are you sure you want to delete this election?</p>
-                <button className="cancel-btn" style={{ background: '#e74c3c', color: '#fff', fontWeight: 600, fontSize: '1.1rem' }} onClick={() => setShowDelete(true)}>Delete Election</button>
-                {showDelete && (
-                  <div style={{ marginTop: 18 }}>
-                    <span style={{ color: '#e74c3c', fontWeight: 600 }}>Are you absolutely sure?</span>
-                    <button className="settings-save-btn" style={{ marginLeft: 16, background: '#e74c3c' }} onClick={handleDeleteElection}>Yes, Delete</button>
-                    <button className="cancel-btn" style={{ marginLeft: 8 }} onClick={() => setShowDelete(false)}>Cancel</button>
-                  </div>
-                )}
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

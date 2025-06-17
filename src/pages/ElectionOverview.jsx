@@ -169,10 +169,31 @@ const ElectionOverview = () => {
 
             {/* Results Section */}
             <div className="results-section">
-              <h3 className="section-title">Voting Results</h3>
+              <div className="results-header">
+                <h3 className="section-title">Voting Results</h3>
+                <div className="results-stats">
+                  <div className="stat-item">
+                    <span className="stat-label">Total Votes:</span>
+                    <span className="stat-value">{election.totalVotes || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Participation:</span>
+                    <span className="stat-value">{election.voterParticipation.percentage.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+
               {election.questions?.map((question) => (
-                <div key={question._id} className="question-results">
-                  <h4 className="question-title">{question.text}</h4>
+                <div key={question._id} className="question-results-card">
+                  <div className="question-header">
+                    <h4 className="question-title">{question.text}</h4>
+                    <div className="question-stats">
+                      <span className="total-votes">
+                        {question.options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0)} votes
+                      </span>
+                    </div>
+                  </div>
+                  
                   <div className="options-results">
                     {question.options.map((option) => {
                       const voteCount = option.voteCount || 0;
@@ -183,16 +204,23 @@ const ElectionOverview = () => {
                       return (
                         <div key={option._id} className={`option-result ${isWinning ? 'winning' : ''}`}>
                           <div className="option-header">
-                            <span className="option-text">{option.text}</span>
-                            <span className="vote-count">{voteCount} votes</span>
+                            <div className="option-info">
+                              <span className="option-text">{option.text}</span>
+                              {isWinning && <span className="winning-badge">Leading</span>}
+                            </div>
+                            <div className="vote-info">
+                              <span className="vote-count">{voteCount} votes</span>
+                              <span className="percentage">{percentage.toFixed(1)}%</span>
+                            </div>
                           </div>
-                          <div className="progress-bar">
+                          <div className="progress-container">
                             <div 
-                              className="progress-fill"
+                              className="progress-bar"
                               style={{ width: `${percentage}%` }}
-                            />
+                            >
+                              <div className="progress-fill" />
+                            </div>
                           </div>
-                          <div className="percentage">{percentage.toFixed(1)}%</div>
                         </div>
                       );
                     })}

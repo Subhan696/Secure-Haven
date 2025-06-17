@@ -1,30 +1,32 @@
-const { body } = require('express-validator');
+const Joi = require('joi');
 
 /**
  * Validation rules for requesting a password reset
  */
-const requestResetValidation = [
-  body('email')
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Please provide a valid email address')
-    .normalizeEmail()
-];
+const requestResetValidation = Joi.object({
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email address',
+    'any.required': 'Email is required'
+  })
+});
 
 /**
  * Validation rules for resetting a password
  */
-const resetPasswordValidation = [
-  body('token')
-    .notEmpty().withMessage('Token is required')
-    .isString().withMessage('Token must be a string'),
-  
-  body('newPassword')
-    .notEmpty().withMessage('New password is required')
-    .isLength({ min: 8 }).withMessage('New password must be at least 8 characters long')
-    .matches(/[a-z]/).withMessage('New password must contain at least one lowercase letter')
-    .matches(/[A-Z]/).withMessage('New password must contain at least one uppercase letter')
-    .matches(/[0-9]/).withMessage('New password must contain at least one number')
-];
+const resetPasswordValidation = Joi.object({
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email address',
+    'any.required': 'Email is required'
+  }),
+  verificationCode: Joi.string().length(6).required().messages({
+    'string.length': 'Verification code must be 6 digits',
+    'any.required': 'Verification code is required'
+  }),
+  newPassword: Joi.string().min(8).required().messages({
+    'string.min': 'Password must be at least 8 characters long',
+    'any.required': 'New password is required'
+  })
+});
 
 module.exports = {
   requestResetValidation,

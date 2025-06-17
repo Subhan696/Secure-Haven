@@ -42,7 +42,7 @@
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(44,62,80,0.06);
-  padding: 2rem 2.5rem 2rem 2.5rem;
+  padding: 2rem 1.5rem 2rem 1.5rem;
   min-width: 350px;
   transition: all 0.3s ease;
 }
@@ -131,24 +131,70 @@
   color: #888;
   margin-top: 0.3rem;
 }
-.settings-save-btn {
-  background: #18c018;
-  color: #fff;
+.btn-primary {
+  background: #3498db;
+  color: white;
   border: none;
   border-radius: 4px;
-  padding: 0.7rem 2.2rem;
+  padding: 0.7rem 1.5rem;
   font-weight: 500;
   font-size: 1.1rem;
   margin-top: 1.2rem;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
-.settings-save-btn:hover {
-  background: #13a013;
+.btn-primary:hover {
+  background: #2980b9;
+  text-decoration: none;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-delete {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.7rem 1.5rem;
+  font-weight: 500;
+  font-size: 1.1rem;
+  margin-top: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.btn-delete:hover {
+  background: #c0392b;
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-delete:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Sidebar-aware layout fix */
@@ -223,7 +269,7 @@
     width: 100%;
   }
   
-  .settings-save-btn {
+  .btn-primary {
     width: 100%;
     padding: 0.6rem 1.5rem;
     font-size: 1rem;
@@ -277,7 +323,7 @@
     font-size: 0.8rem;
   }
   
-  .settings-save-btn {
+  .btn-primary {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
     margin-top: 1rem;

@@ -131,8 +131,8 @@ const Login = () => {
               electionId: res.data.electionId
             });
             
-            // Redirect to voter election page
-            setTimeout(() => navigate(`/voter-election/${res.data.electionId}`), 250);
+            // Redirect to voter dashboard page
+            setTimeout(() => navigate('/voter-dashboard'), 250);
           } else {
             setError('Invalid voter credentials. Please check your email and voter key.');
           }

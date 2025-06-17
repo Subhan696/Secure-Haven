@@ -44,6 +44,26 @@ const Header = () => {
     </>
   );
 
+  const AuthOrUserSection = ({ isMobileView = false }) => (
+    userEmail ? (
+      <div className={`header-user ${isMobileView ? 'mobile-dropdown-item' : ''}`} onClick={() => setDropdownOpen(!dropdownOpen)}>
+        <span className="header-user-icon">📧</span>
+        <span className="header-username">{userEmail.split('@')[0]}</span>
+        {dropdownOpen && (
+          <div className="header-dropdown">
+            <button onClick={() => { setDropdownOpen(false); navigate('/settings'); closeMobileMenu(); }}>Account Settings</button>
+            <button onClick={handleLogout}>Logout</button>
+          </div>
+        )}
+      </div>
+    ) : (
+      <div className={`auth-buttons ${isMobileView ? 'mobile-auth-buttons' : ''}`}>
+        <Link to="/login" className="login-btn" onClick={closeMobileMenu}>Login</Link>
+        <Link to="/signup" className="signup-btn" onClick={closeMobileMenu}>Sign Up</Link>
+      </div>
+    )
+  );
+
   return (
     <header className="main-header">
       <div className="header-content">
@@ -63,25 +83,11 @@ const Header = () => {
           {mobileMenuOpen ? <FaTimes /> : <FaBars />}
         </div>
 
-        <div className={`header-right ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-          {userEmail ? (
-            <div className="header-user" onClick={() => setDropdownOpen(!dropdownOpen)}>
-              <span className="header-user-icon">📧</span>
-              <span className="header-username">{userEmail.split('@')[0]}</span>
-              {dropdownOpen && (
-                <div className="header-dropdown">
-                  <button onClick={() => { setDropdownOpen(false); navigate('/settings'); closeMobileMenu(); }}>Account Settings</button>
-                  <button onClick={handleLogout}>Logout</button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="auth-buttons">
-              <Link to="/login" className="login-btn" onClick={closeMobileMenu}>Login</Link>
-              <Link to="/signup" className="signup-btn" onClick={closeMobileMenu}>Sign Up</Link>
-            </div>
-          )}
-        </div>
+        {!isMobile && (
+          <div className="header-right">
+            <AuthOrUserSection />
+          </div>
+        )}
       </div>
       
       {/* Mobile Navigation */}
@@ -89,6 +95,7 @@ const Header = () => {
         <div className="mobile-nav">
           <ul className="mobile-nav-list">
             <NavigationLinks />
+            <li className="mobile-header-right-section"><AuthOrUserSection isMobileView={true} /></li>
           </ul>
         </div>
       )}

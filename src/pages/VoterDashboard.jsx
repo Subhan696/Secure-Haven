@@ -24,26 +24,26 @@ const VoterDashboard = () => {
 
     // Only fetch elections if user is loaded and not null
     if (currentUser) {
-      const fetchElections = async () => {
-        try {
-          setLoading(true);
-          
-          // Fetch available elections for the voter
-          const electionsResponse = await api.get('/elections/available');
-          
+    const fetchElections = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch available elections for the voter
+        const electionsResponse = await api.get('/elections/available');
+        
           // The hasVoted flag is now provided directly by the backend for each election
           setAllElections(electionsResponse.data.elections || []);
-          setError('');
-        } catch (err) {
-          console.error('Error fetching elections:', err);
-          setError(err.response?.data?.message || 'Failed to load available elections');
-          setAllElections([]);
-        } finally {
-          setLoading(false);
-        }
-      };
+        setError('');
+      } catch (err) {
+        console.error('Error fetching elections:', err);
+        setError(err.response?.data?.message || 'Failed to load available elections');
+        setAllElections([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchElections();
+    fetchElections();
     }
   }, [navigate, currentUser, authLoading]);
 
@@ -114,22 +114,22 @@ const VoterDashboard = () => {
             filteredElections.map(election => {
               console.log(`Election ${election.title} hasVoted:`, election.hasVoted);
               return (
-                <div key={election._id} className="election-card">
-                  <div className="election-card-header">
-                    <h3>{election.title}</h3>
+              <div key={election._id} className="election-card">
+                <div className="election-card-header">
+                  <h3>{election.title}</h3>
                     <span className={`election-status ${election.status?.toLowerCase()}`}>{election.status}</span>
-                  </div>
-                  <div className="election-card-details">
-                    <p><strong>Start Date:</strong> {new Date(election.startDate).toLocaleString()}</p>
-                    <p><strong>End Date:</strong> {new Date(election.endDate).toLocaleString()}</p>
-                    <p><strong>Total Questions:</strong> {election.questions?.length || 0}</p>
-                  </div>
-                  <div className="election-card-actions">
+                </div>
+                <div className="election-card-details">
+                  <p><strong>Start Date:</strong> {new Date(election.startDate).toLocaleString()}</p>
+                  <p><strong>End Date:</strong> {new Date(election.endDate).toLocaleString()}</p>
+                  <p><strong>Total Questions:</strong> {election.questions?.length || 0}</p>
+                </div>
+                <div className="election-card-actions">
                     <Link 
                       to={`/voter-election/${election._id}`}
-                      className={`vote-btn ${election.hasVoted ? 'voted' : ''}`}
-                    >
-                      {election.hasVoted ? 'Voted' : 'Vote Now'}
+                    className={`vote-btn ${election.hasVoted ? 'voted' : ''}`}
+                  >
+                    {election.hasVoted ? 'Voted' : 'Vote Now'}
                     </Link>
                   </div>
                 </div>

@@ -11,21 +11,60 @@ const mongoose = require('mongoose');
 // Helper function to update election status
 async function updateElectionStatus(election) {
   const now = new Date();
-  if (election.endDate < now && ['live', 'scheduled'].includes(election.status)) {
-    const voteCount = await Vote.countDocuments({ election: election._id });
-    let newStatus;
-    if (voteCount > 0) {
-      newStatus = 'completed';
-    } else {
-      newStatus = 'ended';
+  let newStatus = election.status;
+
+  console.log(`[updateElectionStatus] Processing election: ${election.title} (${election._id})`);
+  console.log(`[updateElectionStatus] Initial status: ${election.status}`);
+  console.log(`[updateElectionStatus] Current time: ${now.toISOString()}`);
+  console.log(`[updateElectionStatus] Start Date: ${election.startDate ? new Date(election.startDate).toISOString() : 'N/A'}`);
+  console.log(`[updateElectionStatus] End Date: ${election.endDate ? new Date(election.endDate).toISOString() : 'N/A'}`);
+
+  // Convert date strings to Date objects for comparison
+  const startDate = new Date(election.startDate);
+  const endDate = new Date(election.endDate);
+
+  // Only allow automatic transitions if the election is not explicitly set to draft
+  // If the election was previously live and is now draft, respect the draft status.
+  if (election.status !== 'draft') {
+    console.log(`[updateElectionStatus] Election is NOT draft, proceeding with automatic checks.`);
+    // Check for transition from draft/scheduled to live
+    if (election.status === 'draft' || election.status === 'scheduled') {
+      if (now >= startDate && now < endDate) {
+        newStatus = 'live';
+        console.log(`[updateElectionStatus] Transitioning from ${election.status} to LIVE (now >= startDate && now < endDate)`);
+      } else if (now < startDate) {
+        newStatus = 'scheduled';
+        console.log(`[updateElectionStatus] Transitioning from ${election.status} to SCHEDULED (now < startDate)`);
+      }
     }
 
-    if (election.status !== newStatus) {
-      election.status = newStatus;
-      await election.save();
-      console.log(`Election ${election.title} (${election._id}) status updated to ${newStatus}`);
+    // Check for transition from live to ended/completed
+    if (now >= endDate && (newStatus === 'live' || newStatus === 'scheduled')) {
+      console.log(`[updateElectionStatus] Checking for ENDED/COMPLETED transition (now >= endDate).`);
+      const voteCount = await Vote.countDocuments({ election: election._id });
+      console.log(`[updateElectionStatus] Vote count for ${election._id}: ${voteCount}`);
+      if (voteCount > 0) {
+        newStatus = 'completed';
+        console.log(`[updateElectionStatus] Transitioning to COMPLETED (votes > 0)`);
+      } else {
+        newStatus = 'ended';
+        console.log(`[updateElectionStatus] Transitioning to ENDED (no votes)`);
+      }
     }
+  } else {
+    console.log(`[updateElectionStatus] Election is already DRAFT. Skipping automatic status checks.`);
   }
+
+  // Update if status has changed
+  if (election.status !== newStatus) {
+    console.log(`[updateElectionStatus] Election ${election.title} (${election._id}) status changing from ${election.status} to ${newStatus} (saving to DB)`);
+    election.status = newStatus;
+    await election.save();
+    console.log(`[updateElectionStatus] Election ${election.title} (${election._id}) status updated to ${newStatus} in DB.`);
+  } else {
+    console.log(`[updateElectionStatus] No status change needed for ${election.title} (${election._id}). Status remains ${election.status}.`);
+  }
+
   return election;
 }
 
@@ -56,6 +95,38 @@ router.get('/available', auth, async (req, res) => {
       const hasVoted = !!existingVote;
       const electionObject = election.toObject();
       electionObject.hasVoted = hasVoted;
+
+      // START: Add vote calculation for each election in the list
+      const allVotesForElection = await Vote.find({ election: election._id });
+      const uniqueVotersCount = new Set(allVotesForElection.map(vote => vote.voterEmail)).size;
+      const totalRegisteredVoters = election.voters.length;
+      const participationPercentage = totalRegisteredVoters > 0 ? (uniqueVotersCount / totalRegisteredVoters) * 100 : 0;
+
+      const questionsWithResults = election.questions.map(question => {
+        const optionsWithResults = question.options.map(option => {
+          let voteCount = 0;
+          allVotesForElection.forEach(userVote => {
+            userVote.votes.forEach(singleVote => {
+              if (singleVote.question.equals(question._id) && singleVote.option.equals(option._id)) {
+                voteCount++;
+              }
+            });
+          });
+          return { ...option.toObject(), voteCount };
+        });
+        return { ...question.toObject(), options: optionsWithResults };
+      });
+
+      electionObject.totalVotes = allVotesForElection.length; // Total ballots cast
+      electionObject.totalRegisteredVoters = totalRegisteredVoters;
+      electionObject.voterParticipation = {
+        totalVoters: totalRegisteredVoters,
+        votedVoters: uniqueVotersCount,
+        percentage: participationPercentage,
+      };
+      electionObject.questions = questionsWithResults; // Attach results to questions
+      // END: Add vote calculation for each election in the list
+
       return electionObject;
     }));
 
@@ -287,6 +358,38 @@ router.get('/', auth, async (req, res) => {
       const hasVoted = !!existingVote;
       const electionObject = election.toObject();
       electionObject.hasVoted = hasVoted;
+
+      // START: Add vote calculation for each election in the list
+      const allVotesForElection = await Vote.find({ election: election._id });
+      const uniqueVotersCount = new Set(allVotesForElection.map(vote => vote.voterEmail)).size;
+      const totalRegisteredVoters = election.voters.length;
+      const participationPercentage = totalRegisteredVoters > 0 ? (uniqueVotersCount / totalRegisteredVoters) * 100 : 0;
+
+      const questionsWithResults = election.questions.map(question => {
+        const optionsWithResults = question.options.map(option => {
+          let voteCount = 0;
+          allVotesForElection.forEach(userVote => {
+            userVote.votes.forEach(singleVote => {
+              if (singleVote.question.equals(question._id) && singleVote.option.equals(option._id)) {
+                voteCount++;
+              }
+            });
+          });
+          return { ...option.toObject(), voteCount };
+        });
+        return { ...question.toObject(), options: optionsWithResults };
+      });
+
+      electionObject.totalVotes = allVotesForElection.length; // Total ballots cast
+      electionObject.totalRegisteredVoters = totalRegisteredVoters;
+      electionObject.voterParticipation = {
+        totalVoters: totalRegisteredVoters,
+        votedVoters: uniqueVotersCount,
+        percentage: participationPercentage,
+      };
+      electionObject.questions = questionsWithResults; // Attach results to questions
+      // END: Add vote calculation for each election in the list
+
       return electionObject;
     }));
 
@@ -384,6 +487,7 @@ router.get('/:id', auth, async (req, res) => {
       votedVoters: uniqueVoters.size,
       percentage: voterParticipation
     };
+    electionWithVoteStatus.totalVotes = allVotesForElection.length;
 
     res.status(200).json(electionWithVoteStatus);
   } catch (err) {
@@ -408,26 +512,83 @@ router.put('/:id', auth, validate(updateElectionValidation), async (req, res) =>
     if (!isAdmin && !isCreator) {
       return res.status(403).json({ message: 'Not authorized to update this election' });
     }
+
+    // Define states where editing is NOT allowed for details
+    const nonEditableStates = ['live', 'completed'];
+
+    // Check if the request is *only* trying to revert status to 'draft'
+    const isRevertingToDraft = Object.keys(req.body).length === 1 && req.body.status === 'draft';
+    
+    // If the election is in a non-editable state AND it's not a request to revert to draft,
+    // AND there are other fields being updated (not just status)
+    if (nonEditableStates.includes(election.status) && !isRevertingToDraft) {
+        const nonStatusFields = Object.keys(req.body).filter(key => key !== 'status');
+        if (nonStatusFields.length > 0) {
+            return res.status(403).json({ message: 'Election settings can only be changed when the election is in draft, scheduled, or ended status.' });
+        }
+    }
     
     // Update fields
     const updatedFields = {};
-    const allowedFields = ['title', 'description', 'startDate', 'endDate', 'timezone', 'status'];
+    const allowedFields = ['title', 'description', 'startDate', 'endDate', 'timezone', 'status', 'questions', 'voters'];
     
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        updatedFields[field] = req.body[field];
+        if (field === 'questions') {
+          // Process questions to ensure proper format
+          const processedQuestions = req.body.questions.map(q => {
+            // Process options to ensure proper format
+            const processedOptions = q.options.map(opt => {
+              if (typeof opt === 'object' && opt.text && opt._id) {
+                return opt;
+              }
+              // If already an object but missing _id/text, fix it
+              if (typeof opt === 'object') {
+                return {
+                  _id: opt._id || new mongoose.Types.ObjectId(),
+                  text: opt.text || opt.name || opt.value || String(opt)
+                };
+              }
+              // If string, convert
+              return {
+                _id: new mongoose.Types.ObjectId(),
+                text: opt
+              };
+            });
+            return {
+              ...q,
+              options: processedOptions
+            };
+          });
+          updatedFields[field] = processedQuestions;
+        } else if (field === 'voters') {
+          // Only allow direct voter updates if the voters array is explicitly provided and it's not a bulk upload
+          // This is mostly for the individual add/edit/delete from settings page
+          updatedFields[field] = req.body[field];
+        } else {
+          updatedFields[field] = req.body[field];
+        }
       }
     });
+    
+    console.log('Updating election with fields:', JSON.stringify(updatedFields, null, 2));
     
     // Update the election
     const updatedElection = await Election.findByIdAndUpdate(
       req.params.id,
       { $set: updatedFields },
-      { new: true }
-    );
+      { new: true, runValidators: true }
+    ).populate('createdBy', 'name email');
+    
+    if (!updatedElection) {
+      return res.status(404).json({ message: 'Election not found after update' });
+    }
+    
+    console.log('Election updated successfully:', updatedElection);
     
     res.status(200).json({ message: 'Election updated', election: updatedElection });
   } catch (err) {
+    console.error('Error updating election:', err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -677,51 +838,74 @@ router.put('/:id/status', auth, async (req, res) => {
     }
     
     // Validate status
-    const { status } = req.body;
-    if (!status || !['draft', 'scheduled', 'live', 'ended'].includes(status)) {
+    const { status: requestedStatus } = req.body;
+    if (!requestedStatus || !['draft', 'scheduled', 'live', 'ended'].includes(requestedStatus)) {
       return res.status(400).json({ message: 'Invalid status. Must be one of: draft, scheduled, live, ended' });
     }
-    
-    // Update election status
-    election.status = status;
-    
-    // If launching election, make sure it has questions and voters
-    if (status === 'live' || status === 'scheduled') {
+
+    // Handle explicit request to set status to 'draft'
+    if (requestedStatus === 'draft') {
+      console.log(`Backend: Explicit request to set election ${election._id} to draft from ${election.status}.`);
+      election.status = 'draft';
+      await election.save();
+      console.log(`Backend: Election ${election._id} successfully saved as draft.`);
+      return res.status(200).json({
+        message: 'Election status set to Draft successfully',
+        election: election
+      });
+    }
+
+    // For 'live' or 'scheduled' requests, perform validations and potential overrides
+    let finalStatusToSet = requestedStatus; // Initialize with requested status
+
+    if (requestedStatus === 'live' || requestedStatus === 'scheduled') {
       if (!election.questions || election.questions.length === 0) {
+        console.log('Backend: Cannot launch election without questions.');
         return res.status(400).json({ message: 'Cannot launch election without questions' });
       }
-      
+
       if (!election.voters || election.voters.length === 0) {
+        console.log('Backend: Cannot launch election without voters.');
         return res.status(400).json({ message: 'Cannot launch election without voters' });
       }
-      
+
       // Validate election timing
       const now = new Date();
       const startDate = new Date(election.startDate);
       const endDate = new Date(election.endDate);
-      
+
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.log('Backend: Invalid start or end date.');
         return res.status(400).json({ message: 'Invalid start or end date' });
       }
-      
+
       if (endDate <= startDate) {
+        console.log('Backend: End date must be after start date.');
         return res.status(400).json({ message: 'End date must be after start date' });
       }
-      
-      // For live elections, check if the current time is within the election period
-      if (status === 'live') {
+
+      // Special handling for requested 'live' status
+      if (requestedStatus === 'live') {
         if (now > endDate) {
+          console.log('Backend: Cannot launch election that has already ended.');
           return res.status(400).json({ message: 'Cannot launch election that has already ended' });
+        }
+        // If requested to go live but start date is in future, change to scheduled
+        if (now < startDate) {
+          console.log('Backend: Overriding requested live status to scheduled as start date is in future.');
+          finalStatusToSet = 'scheduled';
         }
       }
     }
-    
-    // Save the updated election
+
+    // Set the election status based on validations/overrides (for live/scheduled/ended requests)
+    console.log(`Backend: Setting election ${election._id} status to ${finalStatusToSet}.`);
+    election.status = finalStatusToSet;
     await election.save();
-    
-    // Return updated election
+    console.log(`Backend: Election ${election._id} successfully saved with status ${finalStatusToSet}.`);
+
     res.status(200).json({
-      message: `Election ${status === 'live' ? 'launched' : status === 'ended' ? 'ended' : 'updated'} successfully`,
+      message: `Election ${finalStatusToSet === 'live' ? 'launched' : finalStatusToSet === 'ended' ? 'ended' : 'updated'} successfully`,
       election: election
     });
   } catch (err) {

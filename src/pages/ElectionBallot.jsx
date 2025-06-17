@@ -17,6 +17,7 @@ const ElectionBallot = () => {
   const [error, setError] = useState('');
 
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   
   useEffect(() => {
     // Fetch election data from backend API
@@ -51,21 +52,38 @@ const ElectionBallot = () => {
   const handleRemoveOption = idx => setNewOptions(opts => opts.filter((_, i) => i !== idx));
   const handleOptionChange = (idx, value) => setNewOptions(opts => opts.map((opt, i) => i === idx ? value : opt));
 
-  const handleAddQuestion = () => {
-    if (!newQuestion.trim()) {
-      setError('Question text is required.');
-      return;
+  const handleAddQuestion = async () => {
+    try {
+      if (!newQuestion.trim()) {
+        setError('Question text is required.');
+        return;
+      }
+      if (newOptions.length < 1 || newOptions.some(opt => !opt.trim())) {
+        setError('Each question must have at least one non-empty option.');
+        return;
+      }
+
+      const newQuestionData = {
+        text: newQuestion.trim(),
+        options: newOptions.filter(opt => opt.trim())
+      };
+
+      console.log('Adding new question:', newQuestionData); // Debug log
+
+      const updated = [...questions, newQuestionData];
+      
+      // Update local state first
+      setQuestions(updated);
+      setNewQuestion('');
+      setNewOptions(['']);
+      setError('');
+
+      // Then update the backend
+      await updateElection({ questions: updated });
+    } catch (err) {
+      console.error('Error adding question:', err);
+      setError('Failed to add question. Please try again.');
     }
-    if (newOptions.length < 1 || newOptions.some(opt => !opt.trim())) {
-      setError('Each question must have at least one non-empty option.');
-      return;
-    }
-    const updated = [...questions, { text: newQuestion, options: newOptions.filter(opt => opt.trim()) }];
-    setQuestions(updated);
-    setNewQuestion('');
-    setNewOptions(['']);
-    setError('');
-    updateElection({ questions: updated });
   };
 
   // Edit question
@@ -77,7 +95,7 @@ const ElectionBallot = () => {
   const handleEditOptionChange = (idx, value) => setEditOptions(opts => opts.map((opt, i) => i === idx ? value : opt));
   const handleEditAddOption = () => setEditOptions(opts => [...opts, '']);
   const handleEditRemoveOption = idx => setEditOptions(opts => opts.filter((_, i) => i !== idx));
-  const handleSaveEdit = idx => {
+  const handleSaveEdit = async (idx) => {
     if (!editQuestion.trim()) {
       setError('Question text is required.');
       return;
@@ -90,42 +108,80 @@ const ElectionBallot = () => {
     setQuestions(updated);
     setEditIdx(null);
     setError('');
-    updateElection({ questions: updated });
+    await updateElection({ questions: updated });
   };
-  const handleDeleteQuestion = idx => {
+  const handleDeleteQuestion = async (idx) => {
     const updated = questions.filter((_, i) => i !== idx);
     setQuestions(updated);
     setEditIdx(null);
     setError('');
-    updateElection({ questions: updated });
+    await updateElection({ questions: updated });
+  };
+
+  // New function to set election status to draft
+  const handleSetToDraft = async () => {
+    try {
+      setIsSaving(true);
+      setError('');
+      const response = await api.put(`/elections/${id}/status`, { status: 'draft' });
+      if (response.data) {
+        setElection(prev => ({ ...prev, status: 'draft' }));
+        alert('Election status set to Draft. You can now edit the ballot.');
+      }
+    } catch (err) {
+      console.error('Error setting to draft:', err);
+      setError(err.response?.data?.message || 'Failed to set election to draft.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   async function updateElection(fields) {
     try {
-      setLoading(true);
+      setIsSaving(true);
+      setError('');
+      console.log('Updating election with fields:', fields); // Debug log
+      
       // Send request to backend API to update election
-      const response = await api.put(`/elections/${id}`, fields);
+      const response = await api.put(`/elections/${id}`, {
+        ...election,
+        ...fields
+      });
+      
+      console.log('Update response:', response.data); // Debug log
       
       if (response.data) {
         // Update the election state to reflect the changes
         setElection(response.data);
+        // Update questions state to ensure consistency
+        setQuestions(response.data.questions || []);
         setError('');
+        
+        // Refresh the election data to ensure we have the latest state
+        const refreshResponse = await api.get(`/elections/${id}`);
+        if (refreshResponse.data) {
+          setElection(refreshResponse.data);
+          setQuestions(refreshResponse.data.questions || []);
+        }
       }
     } catch (err) {
       console.error('Error updating election:', err);
+      console.error('Error details:', err.response?.data); // Debug log
       setError(err.response?.data?.message || 'Failed to update election. Please try again.');
+      
+      // Revert the questions state to the previous state on error
+      try {
+        const response = await api.get(`/elections/${id}`);
+        if (response.data) {
+          setQuestions(response.data.questions || []);
+        }
+      } catch (refreshErr) {
+        console.error('Error refreshing election data:', refreshErr);
+      }
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   }
-
-  // Only allow voting if election is live
-  if (!election) return <div className="loading">Election not found</div>;
-
-  const now = new Date();
-  const startDate = new Date(election.startDate);
-  const endDate = new Date(election.endDate);
-  const isLive = election.launched && now >= startDate && now <= endDate;
 
   if (loading) {
     return (
@@ -135,6 +191,33 @@ const ElectionBallot = () => {
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <div className="error-icon">⚠️</div>
+        <p className="error-message">{error}</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  if (!election) {
+    return (
+      <div className="not-found-container">
+        <div className="not-found-icon">🔍</div>
+        <p className="not-found-message">Election not found</p>
+        <button onClick={() => navigate(-1)} className="back-button">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  // Check if election is available and in editable status
+  const isEditable = election && (election.status === 'draft' || election.status === 'scheduled' || election.status === 'ended');
 
   return (
     <div className="election-details-layout">
@@ -146,9 +229,22 @@ const ElectionBallot = () => {
           </button>
           <h2 className="ballot-title">Ballot</h2>
         </div>
-        {election && election.status === 'Ended' ? (
+        {!isEditable && election && election.status !== 'completed' && election.status !== 'live' && (
+          <div className="status-warning">
+            <p>
+              Ballot editing is disabled because the election is currently{' '}
+              <strong>{election.status}</strong>.
+              To make changes, please revert the election to{' '}
+              <button onClick={handleSetToDraft} disabled={isSaving}>
+                Draft
+              </button>
+              {' '}status or wait for it to be scheduled/ended.
+            </p>
+          </div>
+        )}
+        {election && (election.status === 'completed' || election.status === 'live') ? (
           <div className="ballot-closed-msg">
-            This election has ended. Ballot editing is no longer allowed.
+            This election is {election.status}. Ballot editing is no longer allowed.
           </div>
         ) : (
           <div className="ballot-panel">
@@ -159,6 +255,7 @@ const ElectionBallot = () => {
                 value={newQuestion}
                 onChange={e => setNewQuestion(e.target.value)}
                 className="ballot-question-input"
+                disabled={!isEditable || isSaving}
               />
               {newOptions.map((opt, idx) => (
                 <div key={idx} className="ballot-option-row">
@@ -168,14 +265,15 @@ const ElectionBallot = () => {
                     value={opt}
                     onChange={e => handleOptionChange(idx, e.target.value)}
                     className="ballot-option-input"
+                    disabled={!isEditable || isSaving}
                   />
                   {newOptions.length > 1 && (
-                    <button className="ballot-remove-btn" onClick={() => handleRemoveOption(idx)}>Remove</button>
+                    <button className="ballot-remove-btn" onClick={() => handleRemoveOption(idx)} disabled={!isEditable || isSaving}>Remove</button>
                   )}
                 </div>
               ))}
-              <button className="ballot-add-option-btn" onClick={handleAddOption}>Add Option</button>
-              <button className="ballot-add-btn" onClick={handleAddQuestion}>Add Question</button>
+              <button className="ballot-add-option-btn" onClick={handleAddOption} disabled={!isEditable || isSaving}>Add Option</button>
+              <button className="ballot-add-btn" onClick={handleAddQuestion} disabled={!isEditable || isSaving}>Add Question</button>
             </div>
             {error && <div className="ballot-error">{error}</div>}
             <div className="ballot-questions-list">
@@ -190,6 +288,7 @@ const ElectionBallot = () => {
                         value={editQuestion}
                         onChange={e => setEditQuestion(e.target.value)}
                         className="ballot-question-input"
+                        disabled={!isEditable || isSaving}
                       />
                       {editOptions.map((opt, oidx) => (
                         <div key={oidx} className="ballot-option-row">
@@ -198,27 +297,32 @@ const ElectionBallot = () => {
                             value={opt}
                             onChange={e => handleEditOptionChange(oidx, e.target.value)}
                             className="ballot-option-input"
+                            disabled={!isEditable || isSaving}
                           />
                           {editOptions.length > 1 && (
-                            <button className="ballot-remove-btn" onClick={() => handleEditRemoveOption(oidx)}>Remove</button>
+                            <button className="ballot-remove-btn" onClick={() => handleEditRemoveOption(oidx)} disabled={!isEditable || isSaving}>Remove</button>
                           )}
                         </div>
                       ))}
-                      <button className="ballot-add-option-btn" onClick={handleEditAddOption}>Add Option</button>
-                      <button className="ballot-add-btn" onClick={() => handleSaveEdit(idx)}>Save</button>
-                      <button className="ballot-remove-btn" onClick={() => setEditIdx(null)}>Cancel</button>
+                      <button className="ballot-add-option-btn" onClick={handleEditAddOption} disabled={!isEditable || isSaving}>Add Option</button>
+                      <div className="ballot-actions">
+                        <button onClick={() => handleSaveEdit(idx)} className="ballot-save-btn" disabled={!isEditable || isSaving}>Save</button>
+                        <button onClick={() => setEditIdx(null)} className="ballot-cancel-btn" disabled={!isEditable || isSaving}>Cancel</button>
+                      </div>
                     </>
                   ) : (
-                    <>
-                      <div className="ballot-question-text">{q.text}</div>
-                      <ul className="ballot-options-list">
+                    <div className="question-display">
+                      <h4>{q.text}</h4>
+                      <ul>
                         {q.options.map((opt, oidx) => (
-                          <li key={oidx}>{typeof opt === 'object' ? opt.text : opt}</li>
+                          <li key={oidx}>{opt.text}</li>
                         ))}
                       </ul>
-                      <button className="edit-btn" onClick={() => handleEditQuestion(idx)}>Edit</button>
-                      <button className="ballot-remove-btn" onClick={() => handleDeleteQuestion(idx)}>Delete</button>
-                    </>
+                      <div className="ballot-actions">
+                        <button onClick={() => handleEditQuestion(idx)} className="ballot-edit-btn" disabled={!isEditable || isSaving}>Edit</button>
+                        <button onClick={() => handleDeleteQuestion(idx)} className="ballot-delete-btn" disabled={!isEditable || isSaving}>Delete</button>
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}

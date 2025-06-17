@@ -19,7 +19,7 @@ const Reviews = () => {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        setIsLoading(true);
+    setIsLoading(true);
         setError('');
         const response = await api.get('/reviews');
         setReviews(response.data.reviews || []);
@@ -28,10 +28,10 @@ const Reviews = () => {
         setError(err.response?.data?.message || 'Failed to load reviews. Please try again.');
         setReviews([]);
       } finally {
-        setIsLoading(false);
+      setIsLoading(false);
       }
     };
-
+    
     fetchReviews();
   }, []);
 
@@ -72,19 +72,19 @@ const Reviews = () => {
       const newReviewData = {
         comment: form.comment.trim(),
         rating: Number(form.stars),
-        author: form.author.trim(),
+      author: form.author.trim(),
         email: form.email.trim(),
-      };
+    };
 
       const response = await api.post('/reviews', newReviewData);
       setReviews(prevReviews => [...prevReviews, response.data.review]);
-      setSuccess('Thank you for your review!');
+    setSuccess('Thank you for your review!');
       setForm({ comment: '', stars: 5, author: '', email: '' });
     } catch (err) {
       console.error('Error submitting review:', err);
       setError(err.response?.data?.message || 'Failed to submit review. Please try again.');
     } finally {
-      setIsSubmitting(false);
+    setIsSubmitting(false);
       setTimeout(() => {
         setSuccess('');
         setError('');
@@ -219,7 +219,7 @@ const Reviews = () => {
               </div>
               <p className="review-text">"{review.comment}"</p>
               <div className="review-date">Reviewed on {formatDate(review.createdAt)}</div>
-            </div>
+                </div>
           ))
         ) : (
           <p className="no-reviews">No reviews yet. Be the first to review!</p>
