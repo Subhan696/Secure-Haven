@@ -201,7 +201,7 @@ const VoterElection = () => {
           <h2>Election Not Found</h2>
           <p>The requested election could not be found.</p>
           <button 
-            onClick={() => navigate('/voter-dashboard')}
+            onClick={() => navigate('/voter/dashboard')}
             className="btn btn-primary"
           >
             Back to Dashboard
@@ -273,7 +273,7 @@ const VoterElection = () => {
               Print Results
             </button>
             <button 
-              onClick={() => navigate('/voter-dashboard')}
+              onClick={() => navigate('/voter/dashboard')}
               className="btn btn-primary"
             >
               Back to Dashboard

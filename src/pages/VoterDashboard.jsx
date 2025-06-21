@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import io from 'socket.io-client';
 import VoterHeader from '../components/VoterHeader';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
@@ -15,37 +16,44 @@ const VoterDashboard = () => {
   const [error, setError] = useState('');
   const [votingHistory, setVotingHistory] = useState([]);
 
+  const fetchElections = useCallback(async () => {
+    try {
+      setLoading(true);
+      const electionsResponse = await api.get('/elections/available');
+      setAllElections(electionsResponse.data.elections || []);
+      setError('');
+    } catch (err) {
+      console.error('Error fetching elections:', err);
+      setError(err.response?.data?.message || 'Failed to load available elections');
+      setAllElections([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    // Only redirect if auth is not loading and there's no current user
     if (!authLoading && !currentUser) {
       navigate('/login');
       return;
     }
 
-    // Only fetch elections if user is loaded and not null
     if (currentUser) {
-    const fetchElections = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch available elections for the voter
-        const electionsResponse = await api.get('/elections/available');
-        
-          // The hasVoted flag is now provided directly by the backend for each election
-          setAllElections(electionsResponse.data.elections || []);
-        setError('');
-      } catch (err) {
-        console.error('Error fetching elections:', err);
-        setError(err.response?.data?.message || 'Failed to load available elections');
-        setAllElections([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      fetchElections();
 
-    fetchElections();
+      const socket = io('http://localhost:5001', {
+        transports: ['websocket'],
+      });
+
+      socket.on('electionListUpdated', () => {
+        console.log('Received electionListUpdated on voter dashboard, refetching.');
+        fetchElections();
+      });
+
+      return () => {
+        socket.disconnect();
+      };
     }
-  }, [navigate, currentUser, authLoading]);
+  }, [navigate, currentUser, authLoading, fetchElections]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);

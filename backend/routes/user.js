@@ -38,14 +38,20 @@ router.post('/register', validate(registerValidation), async (req, res) => {
       name, 
       email, 
       password: hashedPassword, 
-      role: role || 'voter' // Default to voter if role not specified
+      role: role || 'admin' // Default to admin if role not specified
     });
     
     await user.save();
     
     // Create and return JWT token for immediate login
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role, name: user.name },
+      { 
+        id: user._id, 
+        email: user.email, 
+        role: user.role, 
+        name: user.name,
+        hasCompletedOnboarding: user.hasCompletedOnboarding 
+      },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -84,7 +90,13 @@ router.post('/login', validate(loginValidation), async (req, res) => {
     
     // Generate JWT
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role, name: user.name },
+      { 
+        id: user._id, 
+        email: user.email, 
+        role: user.role, 
+        name: user.name,
+        hasCompletedOnboarding: user.hasCompletedOnboarding 
+      },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -98,24 +110,6 @@ router.post('/login', validate(loginValidation), async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Get user profile (protected route)
-router.get('/:id', auth, async (req, res) => {
-  try {
-    // Check if user is requesting their own profile or is an admin
-    if (req.user.id !== req.params.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to access this profile' });
-    }
-    
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.status(200).json(user);
-  } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
@@ -175,7 +169,23 @@ router.put('/me/profile', auth, validate(updateProfileValidation), async (req, r
       { new: true }
     ).select('-password');
     
-    res.status(200).json(user);
+    // Generate new JWT token with updated user information
+    const newToken = jwt.sign(
+      { 
+        id: user._id, 
+        email: user.email, 
+        role: user.role, 
+        name: user.name 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.status(200).json({
+      user,
+      token: newToken,
+      message: 'Profile updated successfully'
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -212,6 +222,24 @@ router.put('/me/password', auth, validate(changePasswordValidation), async (req,
   }
 });
 
+// Get user profile (protected route) - MUST come after /me routes
+router.get('/:id', auth, async (req, res) => {
+  try {
+    // Check if user is requesting their own profile or is an admin
+    if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to access this profile' });
+    }
+    
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get all users (admin only)
 router.get('/', auth, admin, async (req, res) => {
   try {
@@ -219,6 +247,24 @@ router.get('/', auth, admin, async (req, res) => {
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// Mark onboarding as completed for the current user
+router.post('/me/complete-onboarding', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.hasCompletedOnboarding = true;
+    await user.save();
+
+    res.status(200).json({ message: 'Onboarding marked as completed.' });
+  } catch (err) {
+    console.error('Onboarding completion error:', err);
+    res.status(500).json({ message: 'Failed to update onboarding status.' });
   }
 });
 

@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import ElectionSidebar from '../components/ElectionSidebar';
 import api from '../utils/api';
 import './ElectionOverview.css';
+import Joyride, { STATUS } from 'react-joyride';
+import { AuthContext } from '../context/AuthContext';
+import { io as socketIOClient } from 'socket.io-client';
 
 const colorCards = [
   { label: 'Voters', color: '#ff7a00', icon: '👥', key: 'voters' },
@@ -16,6 +19,10 @@ const ElectionOverview = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { onboardingTour, setOnboardingTour } = useContext(AuthContext);
+  const [runTour, setRunTour] = useState(false);
+  const hasCompletedOnboardingTour = localStorage.getItem('hasCompletedOnboardingTour') === 'true';
+  const socketRef = useRef(null);
 
   const fetchElection = async () => {
     try {
@@ -40,12 +47,59 @@ const ElectionOverview = () => {
   useEffect(() => {
     fetchElection();
     
-    // Set up periodic refresh every 30 seconds
-    const refreshInterval = setInterval(fetchElection, 30000);
+    // Remove periodic polling
+    // const refreshInterval = setInterval(fetchElection, 30000);
     
-    // Cleanup interval on component unmount
-    return () => clearInterval(refreshInterval);
+    // Set up Socket.IO for real-time updates
+    if (!socketRef.current) {
+      const socketURL = process.env.NODE_ENV === 'development'
+        ? 'http://localhost:5001'
+        : '/';
+      socketRef.current = socketIOClient(socketURL);
+      socketRef.current.on('connect', () => {
+        console.log('Socket.IO connected to', socketURL);
+      });
+      socketRef.current.on('resultsUpdated', (data) => {
+        console.log('Received resultsUpdated event:', data);
+        if (data.electionId === id) {
+          fetchElection();
+        }
+      });
+      socketRef.current.on('connect_error', (err) => {
+        console.error('Socket.IO connection error:', err);
+      });
+    }
+    
+    // Cleanup socket on component unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
   }, [id]);
+
+  useEffect(() => {
+    if (onboardingTour === 'overview' && !hasCompletedOnboardingTour) {
+      setRunTour(true);
+    }
+  }, [onboardingTour, hasCompletedOnboardingTour]);
+
+  const steps = [
+    {
+      target: '.election-overview-main',
+      content: 'This page shows real-time results and analytics for your election.',
+      disableBeacon: true,
+      placement: 'bottom',
+    },
+  ];
+
+  const handleTourCallback = (data) => {
+    const { status } = data;
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+      setRunTour(false);
+    }
+  };
 
   if (loading) {
     return (

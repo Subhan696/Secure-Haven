@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -70,6 +72,7 @@ app.use('/api/elections', require('./routes/election'));
 app.use('/api/votes', require('./routes/vote'));
 app.use('/api/reviews', require('./routes/review'));
 app.use('/api/password-reset', require('./routes/passwordReset'));
+app.use('/api/contact', require('./routes/contact'));
 
 // Sample route
 app.get('/', (req, res) => {
@@ -94,8 +97,17 @@ app.use((err, req, res, next) => {
 // Import the election status updater job
 const { updateElectionStatuses } = require('./jobs/electionStatusUpdater');
 
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+app.set('io', io);
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   
   // Run the election status updater immediately on startup
@@ -105,3 +117,5 @@ app.listen(PORT, () => {
   setInterval(updateElectionStatuses, 5 * 60 * 1000);
   console.log('Election status updater job scheduled to run every 5 minutes');
 });
+
+module.exports = { app, server, io };

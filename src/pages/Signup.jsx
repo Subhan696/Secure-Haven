@@ -126,8 +126,19 @@ const Signup = () => {
         });
       }
     } catch (err) {
-      // Use our improved error handling from the API utility
-      setError(err.message || 'Registration failed');
+      console.error('Signup error:', err);
+      
+      // Handle validation errors from backend
+      if (err.errors && err.errors.length > 0) {
+        // Backend validation errors
+        const validationErrors = err.errors.map(error => error.msg).join(', ');
+        setError(validationErrors);
+      } else if (err.message) {
+        // Other errors (frontend validation, network errors, etc.)
+        setError(err.message);
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -201,16 +212,7 @@ const Signup = () => {
   <label className="form-label" htmlFor="confirmPassword">Confirm Password</label>
 </div>
           <button type="submit" className="btn-primary" disabled={isLoading}>
-            {isLoading ? (
-              <div className="loading-container">
-                <div className="modern-spinner">
-                  <div className="modern-spinner-ring"></div>
-                </div>
-                <span>Loading...</span>
-              </div>
-            ) : (
-              'Sign Up'
-            )}
+            {isLoading ? 'Loading...' : 'Sign Up'}
           </button>
           {isLoading && (
             <div className="progress-bar-container">

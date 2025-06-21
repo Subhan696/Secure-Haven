@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './VoterHeader.css';
 
 const VoterHeader = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
-  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const { currentUser, logout } = useContext(AuthContext);
   const dropdownRef = useRef(null);
   
   // Handle clicks outside the dropdown to close it
@@ -23,8 +24,7 @@ const VoterHeader = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('userEmail');
+    logout();
     navigate('/login');
   };
 
@@ -55,7 +55,7 @@ const VoterHeader = () => {
   return (
     <header className="voter-header">
       <div className="header-left">
-        <h1 onClick={() => navigate('/voter-dashboard')} style={{ cursor: 'pointer' }}>Secure Haven</h1>
+        <h1 onClick={() => navigate('/voter/dashboard')} style={{ cursor: 'pointer' }}>Secure Haven</h1>
       </div>
       <div className="header-right">
         <div className="user-info">
@@ -70,14 +70,14 @@ const VoterHeader = () => {
           {isDropdownOpen && (
             <div className="dropdown-menu">
               <button onClick={() => {
-                navigateWithRoleCheck('/voter-dashboard');
+                navigateWithRoleCheck('/voter/dashboard');
                 setIsDropdownOpen(false);
               }} className="dropdown-item">
                 <span className="dropdown-icon">🏠</span>
                 Dashboard
               </button>
               <button onClick={() => {
-                navigateWithRoleCheck('/voter-profile');
+                navigateWithRoleCheck('/voter/profile');
                 setIsDropdownOpen(false);
               }} className="dropdown-item">
                 <span className="dropdown-icon">📋</span>

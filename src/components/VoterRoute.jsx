@@ -1,9 +1,8 @@
-// src/components/PrivateRoute.jsx
 import React, { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
-const PrivateRoute = () => {
+const VoterRoute = () => {
   const { currentUser, loading } = useContext(AuthContext);
   
   // Show loading indicator while checking authentication
@@ -19,31 +18,31 @@ const PrivateRoute = () => {
   // Check if user is authenticated
   const isAuthenticated = !!currentUser;
   
-  // Check if user is an admin
-  const isAdmin = currentUser?.role === 'admin';
+  // Check if user is a voter
+  const isVoter = currentUser?.role === 'voter';
   
-  console.log('PrivateRoute Debug:', {
+  console.log('VoterRoute Debug:', {
     currentUser,
     isAuthenticated,
     userRole: currentUser?.role,
-    isAdmin
+    isVoter
   });
   
   if (!isAuthenticated) {
     // Not logged in, redirect to login
-    console.log('PrivateRoute: Not authenticated, redirecting to login');
+    console.log('VoterRoute: Not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
   
-  if (!isAdmin) {
-    // Logged in but not an admin, redirect to voter dashboard
-    console.log('PrivateRoute: User is not an admin, redirecting to voter dashboard');
-    return <Navigate to="/voter/dashboard" replace />;
+  if (!isVoter) {
+    // Logged in but not a voter (e.g., admin), redirect to admin dashboard
+    console.log('VoterRoute: User is not a voter, redirecting to admin dashboard');
+    return <Navigate to="/dashboard" replace />;
   }
   
-  // User is authenticated and is an admin, allow access to admin routes
-  console.log('PrivateRoute: User is authenticated and is an admin, allowing access');
+  // User is authenticated and is a voter, allow access to voter routes
+  console.log('VoterRoute: User is authenticated and is a voter, allowing access');
   return <Outlet />;
 };
 
-export default PrivateRoute;
+export default VoterRoute; 

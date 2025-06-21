@@ -279,6 +279,10 @@ router.post('/', auth, async (req, res) => {
       const election = new Election(electionData);
       const savedElection = await election.save();
       console.log('Election created successfully:', savedElection);
+      
+      // Emit event
+      req.app.get('io').emit('electionListUpdated');
+      
       res.status(201).json({ message: 'Election created', election: savedElection });
     } catch (saveErr) {
       console.error('Error saving election:', saveErr);
@@ -527,6 +531,39 @@ router.put('/:id', auth, validate(updateElectionValidation), async (req, res) =>
             return res.status(403).json({ message: 'Election settings can only be changed when the election is in draft, scheduled, or ended status.' });
         }
     }
+
+    // Check if questions are being modified and if there are existing votes
+    if (req.body.questions) {
+      // Check if there are any existing votes for this election
+      const existingVotes = await Vote.findOne({ election: req.params.id });
+      
+      if (existingVotes) {
+        // Compare the new questions with existing questions to detect option changes
+        const hasOptionChanges = req.body.questions.some((newQuestion, index) => {
+          const existingQuestion = election.questions[index];
+          if (!existingQuestion) return true; // New question added
+          
+          // Check if question text changed
+          if (newQuestion.text !== existingQuestion.text) return true;
+          
+          // Check if options changed (compare by text and count)
+          if (newQuestion.options.length !== existingQuestion.options.length) return true;
+          
+          // Check if any option text changed
+          const existingOptionTexts = existingQuestion.options.map(opt => opt.text).sort();
+          const newOptionTexts = newQuestion.options.map(opt => opt.text).sort();
+          
+          return !existingOptionTexts.every((text, i) => text === newOptionTexts[i]);
+        });
+        
+        if (hasOptionChanges) {
+          return res.status(400).json({ 
+            message: 'Cannot modify questions or options after voting has started. This would invalidate existing votes and compromise data integrity. Please revert the election to draft status first if you need to make changes.',
+            code: 'VOTES_EXIST'
+          });
+        }
+        }
+    }
     
     // Update fields
     const updatedFields = {};
@@ -586,6 +623,9 @@ router.put('/:id', auth, validate(updateElectionValidation), async (req, res) =>
     
     console.log('Election updated successfully:', updatedElection);
     
+    // Emit event
+    req.app.get('io').emit('electionListUpdated');
+    
     res.status(200).json({ message: 'Election updated', election: updatedElection });
   } catch (err) {
     console.error('Error updating election:', err);
@@ -612,6 +652,9 @@ router.delete('/:id', auth, async (req, res) => {
     
     // Delete the election
     await Election.findByIdAndDelete(req.params.id);
+    
+    // Emit event
+    req.app.get('io').emit('electionListUpdated');
     
     res.status(200).json({ message: 'Election deleted' });
   } catch (err) {
@@ -748,6 +791,9 @@ router.post('/:id/voters', auth, async (req, res) => {
     
     console.log('Updated election voters:', election.voters);
     
+    // Emit event
+    req.app.get('io').emit('electionListUpdated');
+    
     // Return updated election
     res.status(200).json({ 
       message: 'Voter added successfully', 
@@ -759,32 +805,37 @@ router.post('/:id/voters', auth, async (req, res) => {
   }
 });
 
-// Remove a voter from an election (admin or creator only)
+// Delete a voter from an election
 router.delete('/:id/voters/:voterEmail', auth, async (req, res) => {
   try {
-    console.log('Removing voter from election:', req.params.id);
-    console.log('Voter email:', req.params.voterEmail);
+    const { id: electionId, voterEmail } = req.params;
     
-    // Find the election first to check permissions
-    let election = await Election.findById(req.params.id);
+    const election = await Election.findById(electionId);
     if (!election) {
       return res.status(404).json({ message: 'Election not found' });
     }
     
-    // Check if user is admin or creator
-    const isAdmin = req.user.role === 'admin';
-    const isCreator = election.createdBy.toString() === req.user.id;
-    
-    if (!isAdmin && !isCreator) {
+    // Authorization: only creator or admin can remove voters
+    if (election.createdBy.toString() !== req.user.id) {
+      const user = await User.findById(req.user.id);
+      if (user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to remove voters from this election' });
     }
+    }
+
+    // Prevent removal for live/completed elections
+    if (election.status !== 'draft' && election.status !== 'scheduled') {
+      return res.status(400).json({ message: `Cannot remove voters from an election that is ${election.status}.` });
+    }
     
-    const voterEmail = req.params.voterEmail;
-    
-    // Check if the voter exists in the election
+    // Check if the voter has already voted
+    const existingVote = await Vote.findOne({ election: electionId, voterEmail: voterEmail });
+    if (existingVote) {
+      return res.status(400).json({ message: 'Cannot remove a voter who has already cast a vote.' });
+    }
+
     const voterExists = election.voters.some(v => 
-      (typeof v === 'object' && v.email === voterEmail) || 
-      (typeof v === 'string' && v === voterEmail)
+      v.email.toLowerCase() === voterEmail.toLowerCase()
     );
     
     if (!voterExists) {
@@ -792,32 +843,95 @@ router.delete('/:id/voters/:voterEmail', auth, async (req, res) => {
     }
     
     // Remove voter from election
-    election.voters = election.voters.filter(v => {
-      if (typeof v === 'object') {
-        return v.email !== voterEmail;
-      }
-      if (typeof v === 'string') {
-        return v !== voterEmail;
-      }
-      return true;
-    });
-    
-    console.log('Updated voters after removal:', election.voters);
-    
+    election.voters = election.voters.filter(v =>
+      v.email.toLowerCase() !== voterEmail.toLowerCase()
+    );
+
     await election.save();
-    
-    // Return updated election
-    res.status(200).json({ 
-      message: 'Voter removed successfully', 
+
+    // Emit event
+    req.app.get('io').emit('electionListUpdated');
+
+    res.status(200).json({
+      message: 'Voter removed successfully',
       voters: election.voters,
       election: election
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error removing voter:', err);
+    res.status(500).json({ message: 'Server error while removing voter' });
   }
 });
 
-// Update election status (launch/end election) - admin or creator only
+// Update a voter's details (e.g., email)
+router.put('/:id/voters/:voterId', auth, async (req, res) => {
+  const { id: electionId, voterId } = req.params;
+  const { newEmail } = req.body;
+
+  if (!newEmail || !newEmail.trim()) {
+    return res.status(400).json({ message: 'New email is required' });
+  }
+
+  const trimmedEmail = newEmail.trim().toLowerCase();
+
+  try {
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ message: 'Election not found' });
+    }
+
+    // Authorization: only creator or admin can edit
+    if (election.createdBy.toString() !== req.user.id) {
+      const user = await User.findById(req.user.id);
+      if (user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to update voters for this election' });
+      }
+    }
+    
+    // Prevent edits after election has started
+    if (election.status !== 'draft' && election.status !== 'scheduled') {
+      return res.status(400).json({ message: `Cannot update voters for an election that is ${election.status}.` });
+      }
+
+    // Check if the new email already exists in the voter list (for a different voter)
+    const existingVoterWithNewEmail = election.voters.find(v => v.email === trimmedEmail && v._id.toString() !== voterId);
+    if (existingVoterWithNewEmail) {
+      return res.status(409).json({ message: 'A voter with this email already exists in the election.' });
+    }
+
+    // Find the voter to update
+    const voterToUpdate = election.voters.find(v => v._id.toString() === voterId);
+    if (!voterToUpdate) {
+      return res.status(404).json({ message: 'Voter not found in this election' });
+    }
+
+    // Check if the voter has already voted
+    const existingVote = await Vote.findOne({ election: electionId, voterEmail: voterToUpdate.email });
+    if (existingVote) {
+      return res.status(400).json({ message: 'Cannot update a voter who has already cast a vote.' });
+    }
+
+    // Update voter details
+    voterToUpdate.email = trimmedEmail;
+    voterToUpdate.name = trimmedEmail.split('@')[0]; // Also update name for consistency
+    
+    await election.save();
+    
+    // Emit event
+    req.app.get('io').emit('electionListUpdated');
+
+    res.status(200).json({ 
+      message: 'Voter updated successfully',
+      voters: election.voters,
+    });
+
+  } catch (err) {
+    console.error('Error updating voter:', err);
+    res.status(500).json({ message: 'Server error while updating voter' });
+  }
+});
+
+// Launch an election
 router.put('/:id/status', auth, async (req, res) => {
   try {
     console.log('Updating election status:', req.params.id);
@@ -849,6 +963,10 @@ router.put('/:id/status', auth, async (req, res) => {
       election.status = 'draft';
       await election.save();
       console.log(`Backend: Election ${election._id} successfully saved as draft.`);
+      
+      // Emit event
+      req.app.get('io').emit('electionListUpdated');
+
       return res.status(200).json({
         message: 'Election status set to Draft successfully',
         election: election
@@ -903,6 +1021,9 @@ router.put('/:id/status', auth, async (req, res) => {
     election.status = finalStatusToSet;
     await election.save();
     console.log(`Backend: Election ${election._id} successfully saved with status ${finalStatusToSet}.`);
+    
+    // Emit event
+    req.app.get('io').emit('electionListUpdated');
 
     res.status(200).json({
       message: `Election ${finalStatusToSet === 'live' ? 'launched' : finalStatusToSet === 'ended' ? 'ended' : 'updated'} successfully`,

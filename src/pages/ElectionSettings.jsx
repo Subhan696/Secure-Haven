@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ElectionSidebar from '../components/ElectionSidebar';
 import api from '../utils/api';
 import './ElectionSettings.css';
+import Joyride, { STATUS } from 'react-joyride';
+import { AuthContext } from '../context/AuthContext';
 
 const tabs = [
   { label: 'General', key: 'general' },
@@ -36,6 +38,34 @@ const ElectionSettings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const { onboardingTour, setOnboardingTour } = useContext(AuthContext);
+  const [runTour, setRunTour] = useState(false);
+  const hasCompletedOnboardingTour = localStorage.getItem('hasCompletedOnboardingTour') === 'true';
+
+  useEffect(() => {
+    if (onboardingTour === 'settings' && !hasCompletedOnboardingTour) {
+      setRunTour(true);
+    }
+  }, [onboardingTour, hasCompletedOnboardingTour]);
+
+  const steps = [
+    {
+      target: '.election-settings-main',
+      content: 'Here you can update the election\'s title, description, timing, or even delete the election.',
+      disableBeacon: true,
+      placement: 'bottom',
+    },
+  ];
+
+  const handleTourCallback = (data) => {
+    const { status } = data;
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+      setRunTour(false);
+      setOnboardingTour('');
+      localStorage.setItem('hasCompletedOnboardingTour', 'true');
+    }
+  };
 
   // Helper to format ISO date strings for datetime-local input
   const formatDateTimeLocal = (isoString) => {
@@ -350,6 +380,17 @@ const ElectionSettings = () => {
           </div>
         </div>
       </div>
+      <Joyride
+        steps={steps}
+        run={runTour}
+        continuous
+        showProgress
+        showSkipButton
+        disableOverlayClose={true}
+        spotlightClicks={true}
+        callback={handleTourCallback}
+        styles={{ options: { primaryColor: '#4a90e2', zIndex: 10000 } }}
+      />
     </div>
   );
 };

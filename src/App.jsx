@@ -1,11 +1,12 @@
 // src/App.jsx
-import React from 'react';
+import React, { useContext } from 'react';
 import { AuthProvider } from './context/AuthContext.jsx';
 import {
   createBrowserRouter,
   RouterProvider,
   Outlet,
-  Navigate
+  Navigate,
+  useParams
 } from 'react-router-dom';
 
 import Header from './components/Header'; // Public header
@@ -14,6 +15,9 @@ import DashboardHeader from './components/DashboardHeader'; // Dashboard header
 import DashboardFooter from './components/DashboardFooter'; // Dashboard footer
 import PrivateRoute from './components/PrivateRoute';
 import ErrorBoundary from './components/ErrorBoundary'; // Error boundary component
+import VoterRoute from './components/VoterRoute';
+import { AuthContext } from './context/AuthContext';
+import DashboardLayout from './layouts/DashboardLayout';
 
 // Public Pages
 import Home from './pages/Home';
@@ -63,18 +67,6 @@ const PublicLayout = () => (
   </div>
 );
 
-// Layout for dashboard pages (custom header/footer)
-const DashboardLayout = () => (
-  <div className="App dashboard-app">
-    <ScrollToTop />
-    <DashboardHeader />
-    <main>
-      <Outlet />
-    </main>
-    <DashboardFooter />
-  </div>
-);
-
 // Wrap components with ScrollToTop for individual routes
 const withScrollReset = (Component) => {
   return (
@@ -94,6 +86,17 @@ function VoterDashboardWithKey() {
 function VoterProfileWithKey() {
   const location = useLocation();
   return <VoterProfile key={location.key} />;
+}
+
+// Redirect components for legacy routes
+function VoterElectionRedirect() {
+  const { electionId } = useParams();
+  return <Navigate to={`/voter/election/${electionId}`} replace />;
+}
+
+function VoterElectionResultsRedirect() {
+  const { electionId } = useParams();
+  return <Navigate to={`/voter/election-results/${electionId}`} replace />;
 }
 
 const router = createBrowserRouter([
@@ -145,26 +148,34 @@ const router = createBrowserRouter([
       }
     ]
   },
-  // Voter routes
+  // Voter routes - Protected by authentication
+  {
+    path: '/voter',
+    element: <VoterRoute />,
+    errorElement: <ErrorBoundary />,
+    children: [
+      { path: 'dashboard', element: <VoterDashboardWithKey /> },
+      { path: 'profile', element: <VoterProfileWithKey /> },
+      { path: 'election/:electionId', element: <VoterElection /> },
+      { path: 'election-results/:electionId', element: <VoterElectionResults /> }
+    ]
+  },
+  // Legacy voter routes - redirect to new protected routes
   {
     path: '/voter-dashboard',
-    element: <VoterDashboardWithKey />, 
-    errorElement: <ErrorBoundary />
-  },
-  {
-    path: '/voter-election/:electionId',
-    element: <VoterElection />,
-    errorElement: <ErrorBoundary />
-  },
-  {
-    path: '/voter-election-results/:electionId',
-    element: <VoterElectionResults />,
-    errorElement: <ErrorBoundary />
+    element: <Navigate to="/voter/dashboard" replace />
   },
   {
     path: '/voter-profile',
-    element: <VoterProfileWithKey />,
-    errorElement: <ErrorBoundary />
+    element: <Navigate to="/voter/profile" replace />
+  },
+  {
+    path: '/voter-election/:electionId',
+    element: <VoterElectionRedirect />
+  },
+  {
+    path: '/voter-election-results/:electionId',
+    element: <VoterElectionResultsRedirect />
   }
 ]);
 

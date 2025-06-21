@@ -376,6 +376,12 @@ router.post('/', auth, validate(castVoteValidation), async (req, res, next) => {
         { new: true }
       );
       
+      // Emit Socket.IO event for real-time updates
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('resultsUpdated', { electionId });
+      }
+      
       return res.status(201).json({
         success: true,
         message: 'Vote recorded successfully',

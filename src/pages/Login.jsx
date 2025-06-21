@@ -4,29 +4,6 @@ import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import './Login.css';
 
-function PasswordStrengthMeter({ password }) {
-  const getStrength = (pwd) => {
-    let score = 0;
-    if (!pwd) return { label: '', color: '' };
-    if (pwd.length >= 8) score++;
-    if (/[A-Z]/.test(pwd)) score++;
-    if (/[0-9]/.test(pwd)) score++;
-    if (/[^A-Za-z0-9]/.test(pwd)) score++;
-    if (score <= 1) return { label: 'Weak', color: '#e74c3c' };
-    if (score === 2) return { label: 'Medium', color: '#f1c40f' };
-    if (score >= 3) return { label: 'Strong', color: '#2ecc71' };
-    return { label: '', color: '' };
-  };
-  const { label, color } = getStrength(password);
-  return (
-    <div className="password-strength-meter" style={{ height: '18px', marginTop: '0.5rem' }}>
-      {label && (
-        <span style={{ color, fontWeight: 600, fontSize: '0.95rem' }}>{label}</span>
-      )}
-    </div>
-  );
-}
-
 const Login = () => {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -132,7 +109,7 @@ const Login = () => {
             });
             
             // Redirect to voter dashboard page
-            setTimeout(() => navigate('/voter-dashboard'), 250);
+            setTimeout(() => navigate('/voter/dashboard'), 250);
           } else {
             setError('Invalid voter credentials. Please check your email and voter key.');
           }
@@ -202,7 +179,6 @@ const Login = () => {
     autoComplete="off"
   />
   <label className="form-label" htmlFor="password">Password</label>
-  <PasswordStrengthMeter password={formData.password} />
 </div>
               <div className="forgot-password-link">
                 <a href="/forgot-password">Forgot Password?</a>
@@ -225,16 +201,7 @@ const Login = () => {
 </div>
           )}
           <button type="submit" className="btn-primary" disabled={isLoading}>
-            {isLoading ? (
-              <div className="loading-container">
-                <div className="modern-spinner">
-                  <div className="modern-spinner-ring"></div>
-                </div>
-                <span>Loading...</span>
-              </div>
-            ) : (
-              loginType === 'admin' ? 'Log In' : 'Access Election'
-            )}
+            {isLoading ? 'Loading...' : (loginType === 'admin' ? 'Log In' : 'Access Election')}
           </button>
           {isLoading && (
             <div className="progress-bar-container">

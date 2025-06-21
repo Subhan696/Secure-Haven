@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [onboardingTour, setOnboardingTour] = useState(''); // e.g., 'dashboard', 'wizard', or ''
 
   // Configure API with token on auth state change
   useEffect(() => {
@@ -94,14 +95,25 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
+  // Helper to update current user (for profile updates)
+  const updateCurrentUser = (userData) => {
+    setCurrentUser(prev => ({
+      ...prev,
+      ...userData
+    }));
+  };
+
   return (
     <AuthContext.Provider value={{ 
       currentUser, 
       setCurrentUser, 
       login, 
       logout, 
+      updateCurrentUser,
       loading, 
-      authError 
+      authError,
+      onboardingTour,
+      setOnboardingTour
     }}>
       {children}
     </AuthContext.Provider>

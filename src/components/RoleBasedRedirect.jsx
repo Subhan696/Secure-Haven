@@ -19,8 +19,8 @@ const RoleBasedRedirect = () => {
       console.log('RoleBasedRedirect: User is admin, redirecting to /dashboard');
       navigate('/dashboard');
     } else {
-      console.log('RoleBasedRedirect: User is voter, redirecting to /voter-dashboard');
-      navigate('/voter-dashboard');
+      console.log('RoleBasedRedirect: User is voter, redirecting to /voter/dashboard');
+      navigate('/voter/dashboard');
     }
   }, [currentUser, navigate]);
 

@@ -83,8 +83,8 @@ const PrivacyPolicy = () => {
             If you have any questions about this privacy policy or our privacy practices, please contact us at:
           </p>
           <p>
-            Email: privacy@securehaven.com<br />
-            Phone: +1 (555) 123-4567
+            Email: support@securehaven.com<br />
+            Phone: 042-222-2222
           </p>
         </section>
       </div>

@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getVoterKey } from '../utils/voterKey';
+import Joyride, { STATUS, ACTIONS, EVENTS } from 'react-joyride';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 import './CreateElectionWizard.css';
@@ -135,20 +135,31 @@ function BasicInfoForm({ onNext, onCancel, data, setData }) {
 function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
   const [questions, setQuestions] = useState(data.questions || []);
   const [newQuestion, setNewQuestion] = useState('');
-  const [newOptions, setNewOptions] = useState(['']);
+  const [newOptions, setNewOptions] = useState(['', '']);
+  const [ballotError, setBallotError] = useState('');
 
   const handleAddOption = () => setNewOptions(opts => [...opts, '']);
   const handleRemoveOption = idx => setNewOptions(opts => opts.filter((_, i) => i !== idx));
   const handleOptionChange = (idx, value) => setNewOptions(opts => opts.map((opt, i) => i === idx ? value : opt));
 
   const handleAddQuestion = () => {
-    if (!newQuestion.trim()) return;
-    if (newOptions.length < 1 || newOptions.some(opt => !opt.trim())) return;
+    setBallotError(''); // Clear previous errors
+    
+    const validOptions = newOptions.filter(opt => opt.trim());
 
-    const updated = [...questions, { text: newQuestion, options: newOptions.filter(opt => opt.trim()) }];
+    if (!newQuestion.trim()) {
+      setBallotError('Question text cannot be empty.');
+      return;
+    }
+    if (validOptions.length < 2) {
+      setBallotError('A question must have at least two non-empty options.');
+      return;
+    }
+
+    const updated = [...questions, { text: newQuestion, options: validOptions }];
     setQuestions(updated);
     setNewQuestion('');
-    setNewOptions(['']);
+    setNewOptions(['', '']);
     setData(prev => ({ ...prev, questions: updated }));
   };
 
@@ -159,6 +170,7 @@ function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
         <div className="form-group">
           <input
             type="text"
+            id="question-text"
             value={newQuestion}
             onChange={e => setNewQuestion(e.target.value)}
             placeholder="Enter question"
@@ -170,6 +182,7 @@ function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
             <div key={idx} className="ballot-option">
               <input
                 type="text"
+                id={`option-input-${idx}`}
                 value={opt}
                 onChange={e => handleOptionChange(idx, e.target.value)}
                 placeholder={`Option ${idx + 1}`}
@@ -194,9 +207,11 @@ function BallotBuilder({ onNext, onBack, onCancel, data, setData }) {
             <span>+</span> Add Option
           </button>
         </div>
+        {ballotError && <div className="form-error" style={{ marginBottom: '1rem' }}>{ballotError}</div>}
         <button
           type="button"
           onClick={handleAddQuestion}
+          id="add-question-btn"
           className="btn btn-primary"
         >
           Add Question
@@ -254,14 +269,14 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
     }
 
     try {
-      // Generate a consistent voter key based on email
-      const voterKey = getVoterKey(newVoter);
+      // The backend will now generate the voter key.
+      // const voterKey = getVoterKey(newVoter); 
       
-      // Create a proper voter object
+      // Create a proper voter object without the key
       const voterObj = {
         name: newVoter.split('@')[0], // Use part before @ as name
         email: newVoter,
-        voterKey: voterKey // Use consistent key generation
+        // voterKey: voterKey // This is now handled by the backend
       };
 
       const updated = [...voters, voterObj];
@@ -308,6 +323,7 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
         <form onSubmit={handleAddVoter} className="form-group">
           <input
             type="email"
+            id="voter-email-input"
             value={newVoter}
             onChange={e => setNewVoter(e.target.value)}
             placeholder="Enter voter's email"
@@ -315,6 +331,7 @@ function VoterManagement({ onNext, onBack, onCancel, data, setData }) {
           />
           <button
             type="submit"
+            id="add-voter-btn"
             className="btn btn-primary"
           >
             Add Voter
@@ -433,9 +450,134 @@ function ReviewSave({ onSave, onBack, onCancel, data, isSaving, error }) {
 }
 
 const CreateElectionWizard = () => {
+  const { onboardingTour, setOnboardingTour, currentUser } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [userElections, setUserElections] = useState([]);
+
+  useEffect(() => {
+    // Fetch elections for the current user on mount
+    const fetchElections = async () => {
+      try {
+        const response = await api.get('/elections');
+        if (response.data && response.data.elections) {
+          setUserElections(response.data.elections);
+          if (response.data.elections.length === 0) {
+            setOnboardingTour('wizard');
+          }
+        } else {
+          setUserElections([]);
+          setOnboardingTour('wizard');
+        }
+      } catch (err) {
+        setUserElections([]);
+        setOnboardingTour('wizard');
+      }
+    };
+    fetchElections();
+  }, [setOnboardingTour, currentUser]);
+
+  const tourSteps = {
+    info: [
+      {
+        target: '#title',
+        content: 'First, give your election a clear and descriptive title.',
+        disableBeacon: true,
+      },
+      {
+        target: '#startDate',
+        content: 'Now, set the start date and time for your election.',
+      },
+      {
+        target: '#endDate',
+        content: 'And the end date and time. This must be after the start date.',
+      },
+      {
+        target: '.wizard-actions .btn-primary',
+        content: "Once you're done, click Next to build the ballot.",
+      },
+    ],
+    ballot: [
+      {
+        target: '#question-text',
+        content: 'First, enter the text for your question or the title of the office (e.g., "President").',
+        disableBeacon: true,
+      },
+      {
+        target: '#option-input-0',
+        content: 'Next, enter the first option or candidate for this question.',
+      },
+      {
+        target: '#option-input-1',
+        content: "Now, enter the second option. Remember, a question needs at least two choices.",
+      },
+      {
+        target: '#add-question-btn',
+        content: 'Once your question and its options are ready, click here to add it to the ballot.',
+      },
+      {
+        target: '.wizard-actions .btn-primary',
+        content: 'When you are finished adding questions, click Next to add voters.',
+      }
+    ],
+    voters: [
+      {
+        target: '#voter-email-input',
+        content: 'You can add eligible voters one by one using their email address.',
+        disableBeacon: true,
+      },
+      {
+        target: '#add-voter-btn',
+        content: 'Click here to add the voter to the list.',
+      },
+      {
+       target: '.wizard-actions .btn-primary',
+       content: "When you're done adding voters, click Next to review your election. This will conclude the tour.",
+      }
+    ]
+  };
+
+  const [currentTourSteps, setCurrentTourSteps] = useState([]);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
+  const [runTour, setRunTour] = useState(false);
+
   const [step, setStep] = useState(0);
   const [wizardData, setWizardData] = useState({});
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (onboardingTour === 'wizard') {
+      let newSteps = [];
+      if (step === 0) newSteps = tourSteps.info;
+      else if (step === 1) newSteps = tourSteps.ballot;
+      else if (step === 2) newSteps = tourSteps.voters;
+      
+      setCurrentTourSteps(newSteps);
+      setTourStepIndex(0); // Reset index for the new chapter
+      setRunTour(newSteps.length > 0); // Only run the tour if there are steps for the current view
+    }
+  }, [step, onboardingTour]);
+  
+  const handleWizardTourCallback = async (data) => {
+    const { action, index, status, type } = data;
+
+    if (type === EVENTS.STEP_AFTER) {
+      setTourStepIndex(index + (action === ACTIONS.PREV ? -1 : 1));
+    } else if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status) || action === 'close') {
+      setRunTour(false); // Always stop the tour run for the current chapter
+
+      // If the final chapter is finished, mark onboarding as complete
+      if (step === 2 && status === STATUS.FINISHED) {
+        setOnboardingTour(''); // Fully end the tour process
+        try {
+          await api.post('/users/me/complete-onboarding');
+        } catch (error) {
+          console.error("Failed to mark onboarding as complete", error);
+        }
+      } else if (status === STATUS.SKIPPED || action === 'close') {
+        // If tour was skipped or closed at any point, turn it off completely
+        setOnboardingTour('');
+      }
+    }
+  };
 
   const handleCancel = () => {
     navigate('/dashboard');
@@ -444,7 +586,6 @@ const CreateElectionWizard = () => {
   const handleNext = () => setStep(s => s + 1);
   const handleBack = () => setStep(s => s - 1);
 
-  const { currentUser } = useContext(AuthContext);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -499,6 +640,11 @@ const CreateElectionWizard = () => {
       console.log('API response:', response.data);
       
       if (response.data) {
+        // If this is the first election, stop all tours, then set onboarding for dashboard launch after a short delay
+        if (Array.isArray(response.data.allElections) && response.data.allElections.length === 1) {
+          setOnboardingTour(''); // Stop any running tour
+          setTimeout(() => setOnboardingTour('dashboard-launch'), 200); // Set up dashboard tour after redirect
+        }
         // Navigate to dashboard after successful creation
         navigate('/dashboard');
       }
@@ -512,6 +658,19 @@ const CreateElectionWizard = () => {
 
   return (
     <div style={{ maxWidth: 700, margin: '2rem auto', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #0001', padding: 32 }}>
+      <Joyride
+        key={step}
+        steps={currentTourSteps}
+        run={runTour}
+        stepIndex={tourStepIndex}
+        callback={handleWizardTourCallback}
+        continuous
+        showProgress
+        showSkipButton
+        disableOverlayClose={true}
+        spotlightClicks={true}
+        styles={{ options: { primaryColor: '#4a90e2', zIndex: 10000 } }}
+      />
       <StepIndicator currentStep={step} />
       {step === 0 && <BasicInfoForm onNext={handleNext} onCancel={handleCancel} data={wizardData} setData={setWizardData} />}
       {step === 1 && <BallotBuilder onNext={handleNext} onBack={handleBack} onCancel={handleCancel} data={wizardData} setData={setWizardData} />}

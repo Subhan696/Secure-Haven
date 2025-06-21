@@ -33,8 +33,8 @@ const Footer = () => {
         
         <div className="footer-section">
           <h3>Contact Us</h3>
-          <p>Email: info@securehaven.com</p>
-          <p>Phone: +1 (555) 123-4567</p>
+          <p>Email: support@securehaven.com</p>
+          <p>Phone: 042-222-2222</p>
         </div>
       </div>
       

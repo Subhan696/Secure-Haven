@@ -33,17 +33,37 @@ api.interceptors.response.use(
     }
     
     // Format error message for UI
-    const errorMessage = 
-      (error.response && error.response.data && error.response.data.message) ||
-      error.message ||
-      'Something went wrong';
+    let errorMessage = 'Something went wrong';
+    let errors = [];
+    
+    if (error.response && error.response.data) {
+      // Handle validation errors
+      if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
+        errors = error.response.data.errors;
+        errorMessage = errors.map(err => err.msg).join(', ');
+      } else if (error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
     
     return Promise.reject({
       message: errorMessage,
-      errors: error.response?.data?.errors || [],
+      errors: errors,
       status: error.response?.status
     });
   }
 );
 
 export default api;
+
+// Contact API functions
+export const submitContactForm = async (contactData) => {
+  try {
+    const response = await api.post('/contact/submit', contactData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

@@ -18,6 +18,7 @@ const ElectionBallot = () => {
 
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasExistingVotes, setHasExistingVotes] = useState(false);
   
   useEffect(() => {
     // Fetch election data from backend API
@@ -29,6 +30,12 @@ const ElectionBallot = () => {
         if (response.data) {
           setElection(response.data);
           setQuestions(response.data.questions || []);
+          
+          // Check if there are existing votes
+          if (response.data.totalVotes && response.data.totalVotes > 0) {
+            setHasExistingVotes(true);
+          }
+          
           setError('');
         } else {
           setElection(null);
@@ -156,18 +163,17 @@ const ElectionBallot = () => {
         // Update questions state to ensure consistency
         setQuestions(response.data.questions || []);
         setError('');
-        
-        // Refresh the election data to ensure we have the latest state
-        const refreshResponse = await api.get(`/elections/${id}`);
-        if (refreshResponse.data) {
-          setElection(refreshResponse.data);
-          setQuestions(refreshResponse.data.questions || []);
-        }
       }
     } catch (err) {
       console.error('Error updating election:', err);
       console.error('Error details:', err.response?.data); // Debug log
+      
+      // Handle specific error for votes existing
+      if (err.response?.data?.code === 'VOTES_EXIST') {
+        setError('Cannot modify questions after voting has started. This would invalidate existing votes. Please revert the election to draft status first if you need to make changes.');
+      } else {
       setError(err.response?.data?.message || 'Failed to update election. Please try again.');
+      }
       
       // Revert the questions state to the previous state on error
       try {
@@ -242,6 +248,16 @@ const ElectionBallot = () => {
             </p>
           </div>
         )}
+        
+        {hasExistingVotes && isEditable && (
+          <div className="votes-warning">
+            <p>
+              ⚠️ <strong>Voting has already started</strong> for this election. 
+              Question and option modifications are now disabled to preserve vote integrity. 
+              Any changes would invalidate existing votes and compromise data accuracy.
+            </p>
+          </div>
+        )}
         {election && (election.status === 'completed' || election.status === 'live') ? (
           <div className="ballot-closed-msg">
             This election is {election.status}. Ballot editing is no longer allowed.
@@ -255,7 +271,7 @@ const ElectionBallot = () => {
                 value={newQuestion}
                 onChange={e => setNewQuestion(e.target.value)}
                 className="ballot-question-input"
-                disabled={!isEditable || isSaving}
+                disabled={!isEditable || isSaving || hasExistingVotes}
               />
               {newOptions.map((opt, idx) => (
                 <div key={idx} className="ballot-option-row">
@@ -265,15 +281,15 @@ const ElectionBallot = () => {
                     value={opt}
                     onChange={e => handleOptionChange(idx, e.target.value)}
                     className="ballot-option-input"
-                    disabled={!isEditable || isSaving}
+                    disabled={!isEditable || isSaving || hasExistingVotes}
                   />
                   {newOptions.length > 1 && (
-                    <button className="ballot-remove-btn" onClick={() => handleRemoveOption(idx)} disabled={!isEditable || isSaving}>Remove</button>
+                    <button className="ballot-remove-btn" onClick={() => handleRemoveOption(idx)} disabled={!isEditable || isSaving || hasExistingVotes}>Remove</button>
                   )}
                 </div>
               ))}
-              <button className="ballot-add-option-btn" onClick={handleAddOption} disabled={!isEditable || isSaving}>Add Option</button>
-              <button className="ballot-add-btn" onClick={handleAddQuestion} disabled={!isEditable || isSaving}>Add Question</button>
+              <button className="ballot-add-option-btn" onClick={handleAddOption} disabled={!isEditable || isSaving || hasExistingVotes}>Add Option</button>
+              <button className="ballot-add-btn" onClick={handleAddQuestion} disabled={!isEditable || isSaving || hasExistingVotes}>Add Question</button>
             </div>
             {error && <div className="ballot-error">{error}</div>}
             <div className="ballot-questions-list">
@@ -288,7 +304,7 @@ const ElectionBallot = () => {
                         value={editQuestion}
                         onChange={e => setEditQuestion(e.target.value)}
                         className="ballot-question-input"
-                        disabled={!isEditable || isSaving}
+                        disabled={!isEditable || isSaving || hasExistingVotes}
                       />
                       {editOptions.map((opt, oidx) => (
                         <div key={oidx} className="ballot-option-row">
@@ -297,17 +313,17 @@ const ElectionBallot = () => {
                             value={opt}
                             onChange={e => handleEditOptionChange(oidx, e.target.value)}
                             className="ballot-option-input"
-                            disabled={!isEditable || isSaving}
+                            disabled={!isEditable || isSaving || hasExistingVotes}
                           />
                           {editOptions.length > 1 && (
-                            <button className="ballot-remove-btn" onClick={() => handleEditRemoveOption(oidx)} disabled={!isEditable || isSaving}>Remove</button>
+                            <button className="ballot-remove-btn" onClick={() => handleEditRemoveOption(oidx)} disabled={!isEditable || isSaving || hasExistingVotes}>Remove</button>
                           )}
                         </div>
                       ))}
-                      <button className="ballot-add-option-btn" onClick={handleEditAddOption} disabled={!isEditable || isSaving}>Add Option</button>
+                      <button className="ballot-add-option-btn" onClick={handleEditAddOption} disabled={!isEditable || isSaving || hasExistingVotes}>Add Option</button>
                       <div className="ballot-actions">
-                        <button onClick={() => handleSaveEdit(idx)} className="ballot-save-btn" disabled={!isEditable || isSaving}>Save</button>
-                        <button onClick={() => setEditIdx(null)} className="ballot-cancel-btn" disabled={!isEditable || isSaving}>Cancel</button>
+                        <button onClick={() => handleSaveEdit(idx)} className="ballot-save-btn" disabled={!isEditable || isSaving || hasExistingVotes}>Save</button>
+                        <button onClick={() => setEditIdx(null)} className="ballot-cancel-btn" disabled={!isEditable || isSaving || hasExistingVotes}>Cancel</button>
                       </div>
                     </>
                   ) : (
@@ -319,8 +335,8 @@ const ElectionBallot = () => {
                         ))}
                       </ul>
                       <div className="ballot-actions">
-                        <button onClick={() => handleEditQuestion(idx)} className="ballot-edit-btn" disabled={!isEditable || isSaving}>Edit</button>
-                        <button onClick={() => handleDeleteQuestion(idx)} className="ballot-delete-btn" disabled={!isEditable || isSaving}>Delete</button>
+                        <button onClick={() => handleEditQuestion(idx)} className="ballot-edit-btn" disabled={!isEditable || isSaving || hasExistingVotes}>Edit</button>
+                        <button onClick={() => handleDeleteQuestion(idx)} className="ballot-delete-btn" disabled={!isEditable || isSaving || hasExistingVotes}>Delete</button>
                       </div>
                     </div>
                   )}

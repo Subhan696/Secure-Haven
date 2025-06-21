@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'voter'], default: 'voter' },
+  hasCompletedOnboarding: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   // Add more fields as needed (e.g., votingHistory, etc.)
 });
