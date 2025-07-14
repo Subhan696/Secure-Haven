@@ -7,6 +7,7 @@ const Election = require('../models/Election');
 const Vote = require('../models/Vote');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const { sendVoterKeyEmail } = require('../utils/mailer');
 
 // Helper function to update election status
 async function updateElectionStatus(election) {
@@ -282,7 +283,21 @@ router.post('/', auth, async (req, res) => {
       
       // Emit event
       req.app.get('io').emit('electionListUpdated');
-      
+
+      // Send voter key emails to all voters
+      try {
+        if (Array.isArray(savedElection.voters)) {
+          for (const voter of savedElection.voters) {
+            if (voter.email && voter.voterKey) {
+              await sendVoterKeyEmail(voter.email, voter.voterKey);
+            }
+          }
+        }
+      } catch (emailErr) {
+        console.error('Failed to send one or more voter key emails:', emailErr);
+        // Optionally, you can return a warning in the response
+      }
+
       res.status(201).json({ message: 'Election created', election: savedElection });
     } catch (saveErr) {
       console.error('Error saving election:', saveErr);
@@ -787,6 +802,14 @@ router.post('/:id/voters', auth, async (req, res) => {
     } catch (saveErr) {
       console.error('Error saving election with new voter:', saveErr);
       return res.status(500).json({ message: 'Error saving voter to database: ' + saveErr.message });
+    }
+
+    // Send voter key email after successful addition
+    try {
+      await sendVoterKeyEmail(formattedVoter.email, formattedVoter.voterKey);
+    } catch (emailErr) {
+      console.error('Failed to send voter key email:', emailErr);
+      // Optionally, you can return a warning in the response
     }
     
     console.log('Updated election voters:', election.voters);

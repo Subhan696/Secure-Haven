@@ -40,6 +40,10 @@ Secure Haven is a secure online voting platform with robust user authentication,
    
    # JWT secret for authentication (use a strong random string in production)
    JWT_SECRET=your_secure_jwt_secret_key
+
+   # Gmail credentials for sending voter keys
+   GMAIL_USER=yourgmail@gmail.com
+   GMAIL_PASS=yourapppassword
    
    # Environment mode (development or production)
    NODE_ENV=development

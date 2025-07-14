@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const validate = require('../middleware/validate');
 const { requestResetValidation, resetPasswordValidation } = require('../validations/passwordResetValidations');
+const { sendPasswordResetCodeEmail } = require('../utils/mailer');
 
 // Request a password reset
 router.post('/request', validate(requestResetValidation), async (req, res) => {
@@ -45,7 +46,13 @@ router.post('/request', validate(requestResetValidation), async (req, res) => {
     
     // In a real app: send email with verification code here
     // For development, log the code
-    console.log(`Password reset verification code for ${email}: ${verificationCode}`);
+    // Send the code to the admin's email
+    const adminEmail = process.env.GMAIL_USER;
+    try {
+      await sendPasswordResetCodeEmail(adminEmail, email, verificationCode);
+    } catch (emailErr) {
+      console.error('Failed to send password reset code email:', emailErr);
+    }
     
     res.status(200).json({ 
       message: 'If your email is registered, you will receive a verification code',
