@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema({
   hasCompletedOnboarding: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   // Add more fields as needed (e.g., votingHistory, etc.)
+  isVerified: { type: Boolean, default: false },
+  verificationCode: { type: String },
 });
 
 module.exports = mongoose.model('User', userSchema);

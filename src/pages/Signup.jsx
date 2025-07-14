@@ -26,6 +26,52 @@ function PasswordStrengthMeter({ password }) {
   );
 }
 
+const EmailVerification = ({ email, onSuccess }) => {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsVerifying(true);
+    try {
+      const res = await api.post('/users/verify-email', { email, code });
+      if (res.data && res.data.message) {
+        onSuccess();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Verification failed. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  return (
+    <div className="signup-card">
+      <h2>Verify Your Email</h2>
+      <p>Enter the code sent to <b>{email}</b></p>
+      <form onSubmit={handleVerify}>
+        <div className="form-group">
+          <input
+            className="form-input"
+            type="text"
+            value={code}
+            onChange={e => setCode(e.target.value)}
+            required
+            placeholder="Verification Code"
+            autoComplete="off"
+          />
+        </div>
+        <button type="submit" className="btn-primary" disabled={isVerifying}>
+          {isVerifying ? 'Verifying...' : 'Verify'}
+        </button>
+      </form>
+      {error && <div className="error-message">{error}</div>}
+    </div>
+  );
+};
+
 const Signup = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -37,6 +83,8 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showVerification, setShowVerification] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -108,33 +156,26 @@ const Signup = () => {
         password: formData.password,
         role: 'admin' // Set role to admin for users who sign up through the portal
       });
-      
-      // If registration returns a token (auto-login), use it
-      if (response.data && response.data.token) {
-        // Import AuthContext and use login function if needed
-        // login(response.data.token);
-        // navigate('/dashboard');
-        
-        // For now, just redirect to login
-        navigate('/login', { 
-          state: { message: 'Registration successful! You can now log in.' } 
-        });
-      } else {
-        // Otherwise just redirect to login
-        navigate('/login', { 
-          state: { message: 'Registration successful! You can now log in.' } 
-        });
+
+      // If registration is successful, show verification step
+      if (response.data && response.data.user) {
+        setSignupEmail(formData.email);
+        setShowVerification(true);
+        setIsLoading(false);
+        // Redirect to the standalone verification page
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+        return;
       }
+      // Otherwise just redirect to login
+      navigate('/login', { 
+        state: { message: 'Registration successful! You can now log in.' } 
+      });
     } catch (err) {
       console.error('Signup error:', err);
-      
       // Handle validation errors from backend
-      if (err.errors && err.errors.length > 0) {
-        // Backend validation errors
-        const validationErrors = err.errors.map(error => error.msg).join(', ');
-        setError(validationErrors);
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
       } else if (err.message) {
-        // Other errors (frontend validation, network errors, etc.)
         setError(err.message);
       } else {
         setError('Registration failed. Please try again.');
@@ -144,6 +185,9 @@ const Signup = () => {
     }
   };
 
+  if (showVerification && signupEmail) {
+    return <EmailVerification email={signupEmail} onSuccess={() => navigate('/login', { state: { message: 'Email verified! You can now log in.' } })} />;
+  }
 
   return (
     <>

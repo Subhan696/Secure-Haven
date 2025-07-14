@@ -12,6 +12,8 @@ const {
   updateProfileValidation, 
   changePasswordValidation 
 } = require('../validations/userValidations');
+const { sendSignupVerificationEmail } = require('../utils/mailer');
+const crypto = require('crypto');
 
 // Ensure JWT_SECRET is available
 if (!process.env.JWT_SECRET) {
@@ -27,38 +29,34 @@ router.post('/register', validate(registerValidation), async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
-    
+    if (!email.endsWith('@gmail.com')) {
+      return res.status(400).json({ message: 'Only Gmail accounts are allowed for signup.' });
+    }
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already in use' });
     }
-    
     const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate a 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Save code in user document (for demo, in production use a separate collection with expiry)
     const user = new User({ 
       name, 
       email, 
       password: hashedPassword, 
-      role: role || 'admin' // Default to admin if role not specified
+      role: role || 'admin',
+      isVerified: false,
+      verificationCode
     });
-    
     await user.save();
-    
-    // Create and return JWT token for immediate login
-    const token = jwt.sign(
-      { 
-        id: user._id, 
-        email: user.email, 
-        role: user.role, 
-        name: user.name,
-        hasCompletedOnboarding: user.hasCompletedOnboarding 
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-    
+    // Send verification email
+    try {
+      await sendSignupVerificationEmail(email, verificationCode);
+    } catch (emailErr) {
+      console.error('Failed to send signup verification email:', emailErr);
+    }
     res.status(201).json({ 
-      message: 'User registered successfully',
-      token,
+      message: 'User registered successfully. Please check your Gmail for a verification code.',
       user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
@@ -67,27 +65,51 @@ router.post('/register', validate(registerValidation), async (req, res) => {
   }
 });
 
+// Email verification route
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email and code are required.' });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'User already verified.' });
+    }
+    if (user.verificationCode !== code) {
+      return res.status(400).json({ message: 'Invalid verification code.' });
+    }
+    user.isVerified = true;
+    user.verificationCode = undefined;
+    await user.save();
+    res.status(200).json({ message: 'Email verified successfully. You can now log in.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Login user
 router.post('/login', validate(loginValidation), async (req, res) => {
   try {
     const { email, password } = req.body;
-    
     // Validate input
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
-    
     const user = await User.findOne({ email });
-    
     if (!user) {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
-    
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Please verify your email before logging in.' });
+    }
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
-    
     // Generate JWT
     const token = jwt.sign(
       { 
@@ -100,9 +122,6 @@ router.post('/login', validate(loginValidation), async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    
-    console.log('Login successful for:', email);
-    
     res.status(200).json({
       message: 'Login successful',
       token,
@@ -265,6 +284,31 @@ router.post('/me/complete-onboarding', auth, async (req, res) => {
   } catch (err) {
     console.error('Onboarding completion error:', err);
     res.status(500).json({ message: 'Failed to update onboarding status.' });
+  }
+});
+
+// Resend verification code
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required.' });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'User is already verified.' });
+    }
+    // Generate a new code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationCode = verificationCode;
+    await user.save();
+    await sendSignupVerificationEmail(email, verificationCode);
+    res.status(200).json({ message: 'Verification code resent. Please check your Gmail.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

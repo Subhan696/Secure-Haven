@@ -48,6 +48,7 @@ import { useLocation } from 'react-router-dom';
 import VoterElection from './pages/VoterElection';
 import VoterProfile from './pages/VoterProfile';
 import VoterElectionResults from './pages/VoterElectionResults';
+import EmailVerification from './pages/EmailVerification';
 
 import './App.css';
 
@@ -176,7 +177,8 @@ const router = createBrowserRouter([
   {
     path: '/voter-election-results/:electionId',
     element: <VoterElectionResultsRedirect />
-  }
+  },
+  { path: '/verify-email', element: <EmailVerification /> }
 ]);
 
 function App() {

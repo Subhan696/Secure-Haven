@@ -1,8 +1,85 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import './Login.css';
+
+const EmailVerification = ({ email, onClose }) => {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [inputEmail, setInputEmail] = useState(email || '');
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsVerifying(true);
+    try {
+      const res = await api.post('/users/verify-email', { email: inputEmail, code });
+      if (res.data && res.data.message) {
+        onClose('Email verified! You can now log in.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Verification failed. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResendMsg('');
+    setResendLoading(true);
+    try {
+      const res = await api.post('/users/resend-verification', { email: inputEmail });
+      setResendMsg(res.data.message);
+    } catch (err) {
+      setResendMsg(err.response?.data?.message || 'Failed to resend code.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-card">
+      <h2>Verify Your Email</h2>
+      <form onSubmit={handleVerify}>
+        <div className="form-group">
+          <input
+            className="form-input"
+            type="email"
+            value={inputEmail}
+            onChange={e => setInputEmail(e.target.value)}
+            required
+            placeholder="Email"
+            autoComplete="off"
+          />
+        </div>
+        <div className="form-group">
+          <input
+            className="form-input"
+            type="text"
+            value={code}
+            onChange={e => setCode(e.target.value)}
+            required
+            placeholder="Verification Code"
+            autoComplete="off"
+          />
+        </div>
+        <button type="submit" className="btn-primary" disabled={isVerifying}>
+          {isVerifying ? 'Verifying...' : 'Verify'}
+        </button>
+      </form>
+      <button type="button" onClick={handleResend} disabled={resendLoading} style={{marginTop:8}}>
+        {resendLoading ? 'Resending...' : 'Resend Code'}
+      </button>
+      {resendMsg && <div style={{ color: 'green', marginTop: 8 }}>{resendMsg}</div>}
+      {error && <div className="error-message">{error}</div>}
+      <button type="button" onClick={() => onClose()} style={{marginTop:8}}>Back to Login</button>
+    </div>
+  );
+};
 
 const Login = () => {
   const { login } = useContext(AuthContext);
@@ -17,6 +94,10 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [userInfo, setUserInfo] = useState(null);
+  const [showVerification, setShowVerification] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const emailInputRef = useRef();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,7 +149,7 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
+    setSuccessMsg('');
     try {
       if (loginType === 'admin') {
         // Admin login using backend API
@@ -76,15 +157,12 @@ const Login = () => {
           email: formData.email,
           password: formData.password
         });
-        
         // Store token and user info
         if (res.data.token) {
           login(res.data.token);
           setUserInfo(res.data.user);
-          
           // Log user information for debugging
           console.log('User role from API:', res.data.user.role);
-          
           // Use the role-based redirect component
           console.log('Redirecting to role-based redirect component');
           setTimeout(() => navigate('/redirect'), 250);
@@ -98,7 +176,6 @@ const Login = () => {
             email: formData.email,
             voterKey: formData.voterKey
           });
-          
           if (res.data.token) {
             // Store token and voter info
             login(res.data.token);
@@ -107,7 +184,6 @@ const Login = () => {
               email: formData.email,
               electionId: res.data.electionId
             });
-            
             // Redirect to voter dashboard page
             setTimeout(() => navigate('/voter/dashboard'), 250);
           } else {
@@ -119,13 +195,29 @@ const Login = () => {
         }
       }
     } catch (err) {
-      // Use the error handling from our updated API utility
-      setError(err.message || 'Login failed');
+      console.log('Login error object:', err);
+      // If error is due to unverified email, redirect to verification page
+      if (
+        err.message === 'Please verify your email before logging in.' ||
+        err.response?.data?.message === 'Please verify your email before logging in.'
+      ) {
+        console.log('Redirecting to verification page:', formData.email);
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+        return;
+      } else {
+        setError(err.message || 'Login failed');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (showVerification) {
+    return <EmailVerification email={verifyEmail} onClose={(msg) => {
+      setShowVerification(false);
+      if (msg) setSuccessMsg(msg);
+    }} />;
+  }
 
   return (
     <>
@@ -149,6 +241,7 @@ const Login = () => {
           </button>
         </div>
         {error && <div className="error-message">{error}</div>}
+        {successMsg && <div className="success-message">{successMsg}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
   <input

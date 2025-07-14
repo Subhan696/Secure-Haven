@@ -28,4 +28,14 @@ const sendPasswordResetCodeEmail = async (adminEmail, userEmail, code) => {
   await transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendVoterKeyEmail, sendPasswordResetCodeEmail }; 
+const sendSignupVerificationEmail = async (to, code) => {
+  const mailOptions = {
+    from: process.env.GMAIL_USER,
+    to,
+    subject: 'Verify your email address',
+    text: `Welcome! Please verify your email address using this code: ${code}`,
+  };
+  await transporter.sendMail(mailOptions);
+};
+
+module.exports = { sendVoterKeyEmail, sendPasswordResetCodeEmail, sendSignupVerificationEmail }; 
