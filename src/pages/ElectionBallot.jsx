@@ -21,38 +21,62 @@ const ElectionBallot = () => {
   const [hasExistingVotes, setHasExistingVotes] = useState(false);
   
   useEffect(() => {
-    // Fetch election data from backend API
+    let retryCount = 0;
+    let retryTimeout = null;
+    let isMounted = true;
+
     const fetchElection = async () => {
       try {
         setLoading(true);
         const response = await api.get(`/elections/${id}`);
-        
         if (response.data) {
+          if (!isMounted) return;
           setElection(response.data);
           setQuestions(response.data.questions || []);
-          
-          // Check if there are existing votes
           if (response.data.totalVotes && response.data.totalVotes > 0) {
             setHasExistingVotes(true);
           }
-          
           setError('');
+        } else {
+          if (!isMounted) return;
+          if (retryCount < 3) {
+            setError('Setting up your election, please wait...');
+            retryCount++;
+            retryTimeout = setTimeout(fetchElection, 1000);
+          } else {
+            setElection(null);
+            setQuestions([]);
+            setError('Election not found');
+          }
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        // If 404 or empty, retry
+        if ((err.response && err.response.status === 404) || !err.response?.data) {
+          if (retryCount < 3) {
+            setError('Setting up your election, please wait...');
+            retryCount++;
+            retryTimeout = setTimeout(fetchElection, 1000);
+          } else {
+            setElection(null);
+            setQuestions([]);
+            setError('Election not found');
+          }
         } else {
           setElection(null);
           setQuestions([]);
-          setError('Election not found');
+          setError(err.response?.data?.message || 'Failed to load election details');
         }
-      } catch (err) {
-        console.error('Error fetching election:', err);
-        setElection(null);
-        setQuestions([]);
-        setError(err.response?.data?.message || 'Failed to load election details');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchElection();
+    return () => {
+      isMounted = false;
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
   }, [id]);
 
   const handleAddOption = () => setNewOptions(opts => [...opts, '']);
@@ -157,11 +181,14 @@ const ElectionBallot = () => {
       
       console.log('Update response:', response.data); // Debug log
       
-      if (response.data) {
-        // Update the election state to reflect the changes
-        setElection(response.data);
-        // Update questions state to ensure consistency
-        setQuestions(response.data.questions || []);
+      if (response.data && response.data.election) {
+        // Ensure status is always present
+        const updatedElection = {
+          ...response.data.election,
+          status: response.data.election.status || (election && election.status) || 'draft'
+        };
+        setElection(updatedElection);
+        setQuestions(updatedElection.questions || []);
         setError('');
       }
     } catch (err) {
@@ -239,7 +266,7 @@ const ElectionBallot = () => {
           <div className="status-warning">
             <p>
               Ballot editing is disabled because the election is currently{' '}
-              <strong>{election.status}</strong>.
+              <strong>{election.status ? election.status : 'draft'}</strong>.
               To make changes, please revert the election to{' '}
               <button onClick={handleSetToDraft} disabled={isSaving}>
                 Draft

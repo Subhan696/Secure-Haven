@@ -8,19 +8,20 @@ const User = require('../models/User');
 const mongoose = require('mongoose');
 
 // Create a review
-router.post('/', auth, validate(createReviewValidation), async (req, res) => {
+router.post('/',  validate(createReviewValidation), async (req, res) => {
   try {
     const { rating, comment, author, email } = req.body;
 
-    // Determine the name for the review (prefer author from frontend, then authenticated user's name)
-    const reviewName = author || req.user.name || 'Anonymous';
+    // Determine the name for the review (prefer author from frontend, fallback to 'Anonymous')
+    const reviewName = author || 'Anonymous';
     
-    // Determine the reviewer email (prefer email from frontend, then authenticated user's email)
-    const reviewerEmail = email || req.user.email;
+    // Determine the reviewer email (prefer email from frontend, fallback to null)
+    const reviewerEmail = email || null;
 
-    // Determine the user field (only if it's a valid ObjectId, otherwise null for voters)
+    // No userId for unauthenticated users
     let userId = null;
-    if (req.user.role !== 'voter' && mongoose.Types.ObjectId.isValid(req.user.id)) {
+    // If user is authenticated, set userId (optional, for future extension)
+    if (req.user && req.user.role !== 'voter' && mongoose.Types.ObjectId.isValid(req.user.id)) {
       userId = req.user.id;
     }
     
